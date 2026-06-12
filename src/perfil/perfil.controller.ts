@@ -1,34 +1,41 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PerfilService } from './perfil.service';
-import { CreatePerfilDto } from './dto/create-perfil.dto';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
+import { UsuarioAutenticado } from './perfil.entity';
+
+// request.user es inyectado por JwtStrategy.validate()
+interface RequestConUsuario extends Request {
+  user: UsuarioAutenticado;
+}
 
 @Controller('perfil')
+@UseGuards(JwtAuthGuard) // Protege todo el controlador
 export class PerfilController {
   constructor(private readonly perfilService: PerfilService) {}
 
-  @Post()
-  create(@Body() createPerfilDto: CreatePerfilDto) {
-    return this.perfilService.create(createPerfilDto);
-  }
-
   @Get()
-  findAll() {
-    return this.perfilService.findAll();
+  @HttpCode(HttpStatus.OK)
+  obtenerPerfil(@Request() req: RequestConUsuario) {
+    // El ID siempre viene del JWT — nunca del body/params
+    return this.perfilService.obtenerPerfil(req.user.id);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.perfilService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePerfilDto: UpdatePerfilDto) {
-    return this.perfilService.update(+id, updatePerfilDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.perfilService.remove(+id);
+  @Patch()
+  @HttpCode(HttpStatus.OK)
+  actualizarPerfil(
+    @Request() req: RequestConUsuario,
+    @Body() dto: UpdatePerfilDto,
+  ) {
+    return this.perfilService.actualizarPerfil(req.user.id, dto);
   }
 }

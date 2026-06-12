@@ -8,7 +8,13 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
  const app = await NestFactory.create<NestExpressApplication>(AppModule); // 👈 Tipo específico
- app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+ app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true,       // elimina props no declaradas en el DTO
+    forbidNonWhitelisted: true,
+    transform: true,       // convierte tipos primitivos (ej: string → number en @Query)
+  }),
+);
  app.useStaticAssets(join(__dirname, '..', 'public')); // 👈 Habilita acceso público a /public
 
 

@@ -1,26 +1,25 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAdminDto } from './dto/create-admin.dto';
-import { UpdateAdminDto } from './dto/update-admin.dto';
+import { UsuariosService } from '../usuarios/usuarios.service';
+import { CreateStaffDto } from './dto/create-admin.dto';
+import { FiltrosUsuario } from './admin.entity';
 
 @Injectable()
 export class AdminService {
-  create(createAdminDto: CreateAdminDto) {
-    return 'This action adds a new admin';
+  constructor(private readonly usuariosService: UsuariosService) {}
+
+  async crearStaff(dto: CreateStaffDto) {
+    const usuario = await this.usuariosService.crear(dto);
+    const { password, ...resultado } = usuario;
+    return resultado;
   }
 
-  findAll() {
-    return `This action returns all admin`;
+  async listarUsuarios(filtros: FiltrosUsuario) {
+    const { pagina = 1, limite = 10, rol } = filtros;
+    return this.usuariosService.listarTodos(pagina, limite, rol);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} admin`;
-  }
-
-  update(id: number, updateAdminDto: UpdateAdminDto) {
-    return `This action updates a #${id} admin`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} admin`;
+  async darDeBaja(id: string): Promise<{ mensaje: string }> {
+    await this.usuariosService.desactivar(id);
+    return { mensaje: `Usuario ${id} desactivado correctamente` };
   }
 }

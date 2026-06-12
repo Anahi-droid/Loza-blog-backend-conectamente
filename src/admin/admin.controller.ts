@@ -1,34 +1,51 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from './roles.guard';
+import { Roles } from './roles.decorator';
 import { AdminService } from './admin.service';
-import { CreateAdminDto } from './dto/create-admin.dto';
-import { UpdateAdminDto } from './dto/update-admin.dto';
+import { CreateStaffDto } from './dto/create-admin.dto';
 
-@Controller('admin')
+@Controller('admin/usuarios')
+@UseGuards(JwtAuthGuard, RolesGuard) // Orden: primero autenticación, luego rol
+@Roles('ADMIN')                       // Todo el controlador requiere rol ADMIN
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Post()
-  create(@Body() createAdminDto: CreateAdminDto) {
-    return this.adminService.create(createAdminDto);
+  @HttpCode(HttpStatus.CREATED)
+  crearStaff(@Body() dto: CreateStaffDto) {
+    return this.adminService.crearStaff(dto);
   }
 
   @Get()
-  findAll() {
-    return this.adminService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.adminService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAdminDto: UpdateAdminDto) {
-    return this.adminService.update(+id, updateAdminDto);
+  @HttpCode(HttpStatus.OK)
+  listarUsuarios(
+    @Query('pagina') pagina?: string,
+    @Query('limite') limite?: string,
+    @Query('rol') rol?: string,
+  ) {
+    return this.adminService.listarUsuarios({
+      pagina: pagina ? parseInt(pagina, 10) : 1,
+      limite: limite ? parseInt(limite, 10) : 10,
+      rol,
+    });
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.adminService.remove(+id);
+  @HttpCode(HttpStatus.OK)
+  darDeBaja(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.darDeBaja(id);
   }
 }

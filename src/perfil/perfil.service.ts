@@ -1,26 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePerfilDto } from './dto/create-perfil.dto';
+import { UsuariosService } from '../usuarios/usuarios.service';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
+import { Usuario } from '../usuarios/usuario.entity';
 
 @Injectable()
 export class PerfilService {
-  create(createPerfilDto: CreatePerfilDto) {
-    return 'This action adds a new perfil';
+  constructor(private readonly usuariosService: UsuariosService) {}
+
+  async obtenerPerfil(usuarioId: string): Promise<Omit<Usuario, 'password'>> {
+    const usuario = await this.usuariosService.buscarPorId(usuarioId);
+    const { password, ...perfil } = usuario;
+    return perfil;
   }
 
-  findAll() {
-    return `This action returns all perfil`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} perfil`;
-  }
-
-  update(id: number, updatePerfilDto: UpdatePerfilDto) {
-    return `This action updates a #${id} perfil`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} perfil`;
+  async actualizarPerfil(
+    usuarioId: string,
+    dto: UpdatePerfilDto,
+  ): Promise<Omit<Usuario, 'password'>> {
+    const usuario = await this.usuariosService.actualizar(usuarioId, dto);
+    const { password, ...perfil } = usuario;
+    return perfil;
   }
 }

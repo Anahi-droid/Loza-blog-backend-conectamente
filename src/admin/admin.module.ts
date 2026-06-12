@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
-import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
+import { AdminService } from './admin.service';
+import { UsuariosModule } from '../usuarios/usuarios.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
+  imports: [
+    UsuariosModule, // para UsuariosService
+    AuthModule,     // para JwtAuthGuard
+  ],
   controllers: [AdminController],
   providers: [AdminService],
 })
