@@ -16,36 +16,30 @@ import { RolesGuard } from './roles.guard';
 import { Roles } from './roles.decorator';
 import { AdminService } from './admin.service';
 import { CreateStaffDto } from './dto/create-admin.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('admin')
+@ApiBearerAuth('jwt-auth')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 @Controller('admin/usuarios')
-@UseGuards(JwtAuthGuard, RolesGuard) // Orden: primero autenticación, luego rol
-@Roles('ADMIN')                       // Todo el controlador requiere rol ADMIN
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
 
+  @ApiOperation({ summary: 'Registrar personal interno (PSICOLOGO o ADMIN)' })
+  @ApiResponse({ status: 201, description: 'Staff registrado correctamente' })
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  crearStaff(@Body() dto: CreateStaffDto) {
-    return this.adminService.crearStaff(dto);
-  }
+  crearStaff(@Body() dto: CreateStaffDto) { ... }
 
+  @ApiOperation({ summary: 'Listar todos los usuarios con paginación y filtro por rol' })
+  @ApiQuery({ name: 'pagina', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limite', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'rol',    required: false, enum: ['PACIENTE','PSICOLOGO','ADMIN'] })
   @Get()
-  @HttpCode(HttpStatus.OK)
-  listarUsuarios(
-    @Query('pagina') pagina?: string,
-    @Query('limite') limite?: string,
-    @Query('rol') rol?: string,
-  ) {
-    return this.adminService.listarUsuarios({
-      pagina: pagina ? parseInt(pagina, 10) : 1,
-      limite: limite ? parseInt(limite, 10) : 10,
-      rol,
-    });
-  }
+  listarUsuarios(@Query('pagina') pagina, @Query('limite') limite, @Query('rol') rol) { ... }
 
+  @ApiOperation({ summary: 'Borrado lógico — setea activo=false' })
+  @ApiResponse({ status: 200, description: 'Usuario desactivado correctamente' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  darDeBaja(@Param('id', ParseUUIDPipe) id: string) {
-    return this.adminService.darDeBaja(id);
-  }
+  darDeBaja(@Param('id', ParseUUIDPipe) id: string) { ... }
 }

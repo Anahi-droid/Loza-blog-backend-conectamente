@@ -18,24 +18,22 @@ interface RequestConUsuario extends Request {
   user: UsuarioAutenticado;
 }
 
+
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+
+@ApiTags('perfil')
+@ApiBearerAuth('jwt-auth')   // ← debe coincidir con el nombre del esquema en main.ts
+@UseGuards(JwtAuthGuard)
 @Controller('perfil')
-@UseGuards(JwtAuthGuard) // Protege todo el controlador
 export class PerfilController {
-  constructor(private readonly perfilService: PerfilService) {}
 
+  @ApiOperation({ summary: 'Obtener mi perfil (extraído del JWT)' })
+  @ApiResponse({ status: 200, description: 'Perfil del usuario autenticado' })
   @Get()
-  @HttpCode(HttpStatus.OK)
-  obtenerPerfil(@Request() req: RequestConUsuario) {
-    // El ID siempre viene del JWT — nunca del body/params
-    return this.perfilService.obtenerPerfil(req.user.id);
-  }
+  obtenerPerfil(@Request() req) { ... }
 
+  @ApiOperation({ summary: 'Actualizar mi perfil (nombre, apellido, password)' })
+  @ApiResponse({ status: 200, description: 'Perfil actualizado correctamente' })
   @Patch()
-  @HttpCode(HttpStatus.OK)
-  actualizarPerfil(
-    @Request() req: RequestConUsuario,
-    @Body() dto: UpdatePerfilDto,
-  ) {
-    return this.perfilService.actualizarPerfil(req.user.id, dto);
-  }
+  actualizarPerfil(@Request() req, @Body() dto: UpdatePerfilDto) { ... }
 }
