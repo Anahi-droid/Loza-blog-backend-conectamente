@@ -1,49 +1,44 @@
-name: 🚀 Deploy Loza Backend
+name: 🚀 Deploy NestJS Blog Backend API to VPS
 
 on:
-push:
-branches:
-- main
+  push:
+    branches: [main]
 
 jobs:
-deploy:
-runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-  - name: Copy files to VPS
-    uses: appleboy/scp-action@v0.1.7
-    with:
-      host: ${{ secrets.VPS_HOST }}
-      username: root
-      key: ${{ secrets.VPS_KEY }}
-      source: "."
-      target: "/opt/Loza-blog-backend-conectamente"
+    - name: Copy project to VPS
+      uses: appleboy/scp-action@v0.1.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: root
+        key: ${{ secrets.VPS_KEY }}
+        source: "."
+        target: "/opt/Loza-blog-backend-conectamente"
 
-  - name: Deploy application
-    uses: appleboy/ssh-action@v1.0.3
-    with:
-      host: ${{ secrets.VPS_HOST }}
-      username: root
-      key: ${{ secrets.VPS_KEY }}
-      script: |
-        set -e
+    - name: Run deploy commands on VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: root
+        key: ${{ secrets.VPS_KEY }}
+        script: |
+          set -e
+          cd /opt/Loza-blog-backend-conectamente
 
-        cd /opt/Loza-blog-backend-conectamente
+          sudo lsof -t -i:3000 | xargs -r sudo kill -9 || true
 
-        printf "%s" "${{ secrets.ENV_FILE }}" > .env
+          printf "%s" "${{ secrets.ENV_FILE }}" > .env
 
-        npm install
+          npm install
+          npm run build
 
-        npm run build
-
-        pm2 stop loza-blog-backend-conectamente || true
-
-        pm2 delete loza-blog-backend-conectamente || true
-
-        pm2 start dist/main.js --name loza-blog-backend-conectamente
-
-        pm2 save
-
+          pm2 stop loza-blog-backend-conectamente || true
+          pm2 delete loza-blog-backend-conectamente || true
+          pm2 start dist/main.js --name loza-blog-backend-conectamente
+          pm2 save
