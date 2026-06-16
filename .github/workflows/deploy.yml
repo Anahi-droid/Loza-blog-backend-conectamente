@@ -2,7 +2,8 @@ name: 🚀 Deploy Loza Backend
 
 on:
 push:
-branches: [main]
+branches:
+- main
 
 jobs:
 deploy:
@@ -35,9 +36,11 @@ steps:
         printf "%s" "${{ secrets.ENV_FILE }}" > .env
 
         npm install
+
         npm run build
 
         pm2 stop loza-blog-backend-conectamente || true
+
         pm2 delete loza-blog-backend-conectamente || true
 
         pm2 start dist/main.js --name loza-blog-backend-conectamente
