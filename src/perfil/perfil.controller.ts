@@ -26,14 +26,19 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagg
 @UseGuards(JwtAuthGuard)
 @Controller('perfil')
 export class PerfilController {
+  constructor(private readonly perfilService: PerfilService) {}
 
   @ApiOperation({ summary: 'Obtener mi perfil (extraído del JWT)' })
   @ApiResponse({ status: 200, description: 'Perfil del usuario autenticado' })
   @Get()
-  obtenerPerfil(@Request() req) { ... }
+  async obtenerPerfil(@Request() req: RequestConUsuario) {
+    return this.perfilService.obtenerPerfil(req.user.id);
+  }
 
   @ApiOperation({ summary: 'Actualizar mi perfil (nombre, apellido, password)' })
   @ApiResponse({ status: 200, description: 'Perfil actualizado correctamente' })
   @Patch()
-  actualizarPerfil(@Request() req, @Body() dto: UpdatePerfilDto) { ... }
+  async actualizarPerfil(@Request() req: RequestConUsuario, @Body() dto: UpdatePerfilDto) {
+    return this.perfilService.actualizarPerfil(req.user.id, dto);
+  }
 }

@@ -24,22 +24,33 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@ne
 @Roles('ADMIN')
 @Controller('admin/usuarios')
 export class AdminController {
+  constructor(private readonly adminService: AdminService) {}
 
   @ApiOperation({ summary: 'Registrar personal interno (PSICOLOGO o ADMIN)' })
   @ApiResponse({ status: 201, description: 'Staff registrado correctamente' })
   @Post()
-  crearStaff(@Body() dto: CreateStaffDto) { ... }
+  async crearStaff(@Body() dto: CreateStaffDto) {
+    return this.adminService.crearStaff(dto);
+  }
 
   @ApiOperation({ summary: 'Listar todos los usuarios con paginación y filtro por rol' })
   @ApiQuery({ name: 'pagina', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limite', required: false, type: Number, example: 10 })
   @ApiQuery({ name: 'rol',    required: false, enum: ['PACIENTE','PSICOLOGO','ADMIN'] })
   @Get()
-  listarUsuarios(@Query('pagina') pagina, @Query('limite') limite, @Query('rol') rol) { ... }
+  async listarUsuarios(@Query('pagina') pagina, @Query('limite') limite, @Query('rol') rol) {
+    return this.adminService.listarUsuarios({
+      pagina: pagina ? Number(pagina) : undefined,
+      limite: limite ? Number(limite) : undefined,
+      rol,
+    });
+  }
 
   @ApiOperation({ summary: 'Borrado lógico — setea activo=false' })
   @ApiResponse({ status: 200, description: 'Usuario desactivado correctamente' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   @Delete(':id')
-  darDeBaja(@Param('id', ParseUUIDPipe) id: string) { ... }
+  async darDeBaja(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.darDeBaja(id);
+  }
 }
