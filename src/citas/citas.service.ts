@@ -1,26 +1,62 @@
-import { Injectable } from '@nestjs/common';
-import { CreateCitaDto } from './dto/create-cita.dto';
-import { UpdateCitaDto } from './dto/update-cita.dto';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Cita } from '../citas/cita.entity';
+import { Agenda } from '../agenda/agenda.entity';
 
 @Injectable()
 export class CitasService {
-  create(createCitaDto: CreateCitaDto) {
-    return 'This action adds a new cita';
+  constructor(
+    @InjectRepository(Cita)
+    private citaRepository: Repository<Cita>,
+    @InjectRepository(Agenda)
+    private agendaRepository: Repository<Agenda>,
+  ) {}
+
+  async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
+    const agenda = await this.agendaRepository.findOne({
+      where: { id: agendaId },
+      relations: ['psicologo'],
+    });
+
+    if (!agenda) {
+      throw new NotFoundException('El horario seleccionado no existe.');
+    }
+
+    if (agenda.estaReservado) {
+      throw new BadRequestException('Este horario ya ha sido reservado.');
+    }
+
+
+    agenda.estaReservado = true;
+    await this.agendaRepository.save(agenda);
+
+    
+    const nuevaCita = this.citaRepository.create({
+      fechaHora: agenda.fechaHoraInicio,
+      motivoConsulta: motivo,
+      paciente: { id: pacienteId }, 
+      psicologo: agenda.psicologo,
+      estado: 'PENDIENTE',
+    });
+
+    return await this.citaRepository.save(nuevaCita);
   }
 
-  findAll() {
-    return `This action returns all citas`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} cita`;
-  }
-
-  update(id: number, updateCitaDto: UpdateCitaDto) {
-    return `This action updates a #${id} cita`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} cita`;
+  
+  async listarMisCitas(usuarioId: string, rol: string): Promise<Cita[]> {
+    if (rol === 'PSICOLOGO') {
+      return await this.citaRepository.find({
+        where: { psicologo: { usuario: { id: usuarioId } } },
+        relations: ['paciente'],
+        order: { fechaHora: 'DESC' },
+      });
+    } else {
+      return await this.citaRepository.find({
+        where: { paciente: { id: usuarioId } },
+        relations: ['psicologo', 'psicologo.usuario'],
+        order: { fechaHora: 'DESC' },
+      });
+    }
   }
 }

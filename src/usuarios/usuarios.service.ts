@@ -1,26 +1,63 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUsuarioDto } from './dto/create-usuario.dto';
-import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Cita } from '../citas/cita.entity';
+import { Agenda } from '../agenda/agenda.entity';
 
 @Injectable()
-export class UsuariosService {
-  create(createUsuarioDto: CreateUsuarioDto) {
-    return 'This action adds a new usuario';
+export class CitasService {
+  constructor(
+    @InjectRepository(Cita)
+    private citaRepository: Repository<Cita>,
+    @InjectRepository(Agenda)
+    private agendaRepository: Repository<Agenda>,
+  ) {}
+
+  async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
+    // 1. Verificar si el bloque de agenda existe y traer la relación del psicólogo
+    const agenda = await this.agendaRepository.findOne({
+      where: { id: agendaId },
+      relations: ['psicologo'],
+    });
+
+    if (!agenda) {
+      throw new NotFoundException('El horario seleccionado no existe.');
+    }
+
+    if (agenda.estaReservado) {
+      throw new BadRequestException('Este horario ya ha sido reservado.');
+    }
+
+    // 2. Marcar el horario como reservado
+    agenda.estaReservado = true;
+    await this.agendaRepository.save(agenda);
+
+    // 3. Crear la cita formal
+    const nuevaCita = this.citaRepository.create({
+      fechaHora: agenda.fechaHoraInicio,
+      motivoConsulta: motivo,
+      paciente: { id: pacienteId }, // El ID viene del JWT del paciente
+      psicologo: agenda.psicologo,
+      estado: 'PENDIENTE',
+    });
+
+    return await this.citaRepository.save(nuevaCita);
   }
 
-  findAll() {
-    return `This action returns all usuarios`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} usuario`;
-  }
-
-  update(id: number, updateUsuarioDto: UpdateUsuarioDto) {
-    return `This action updates a #${id} usuario`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} usuario`;
+  // Historial de citas para un Paciente o Psicólogo
+  async listarMisCitas(usuarioId: string, rol: string): Promise<Cita[]> {
+    if (rol === 'PSICOLOGO') {
+      return await this.citaRepository.find({
+        where: { psicologo: { usuario: { id: usuarioId } } },
+        relations: ['paciente'],
+        order: { fechaHora: 'DESC' },
+      });
+    } else {
+      return await this.citaRepository.find({
+        where: { paciente: { id: usuarioId } },
+        relations: ['psicologo', 'psicologo.usuario'],
+        order: { fechaHora: 'DESC' },
+      });
+    }
   }
 }
