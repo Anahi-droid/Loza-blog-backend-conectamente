@@ -1,26 +1,44 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAgendaDto } from './dto/create-agenda.dto';
-import { UpdateAgendaDto } from './dto/update-agenda.dto';
+import { Injectable, ConflictException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Agenda } from '../agenda/agenda.entity';
 
 @Injectable()
-export class AgendaService {
-  create(createAgendaDto: CreateAgendaDto) {
-    return 'This action adds a new agenda';
+export class AgendasService {
+  constructor(
+    @InjectRepository(Agenda)
+    private agendaRepository: Repository<Agenda>,
+  ) {}
+
+  
+  async crearDisponibilidad(psicologoId: string, fechaHora: Date): Promise<Agenda> {
+    const existe = await this.agendaRepository.findOne({
+      where: {
+        psicologo: { id: psicologoId },
+        fechaHoraInicio: fechaHora,
+      },
+    });
+
+    if (existe) {
+      throw new ConflictException('Ya registraste disponibilidad para esta fecha y hora.');
+    }
+
+    const bloque = this.agendaRepository.create({
+      fechaHoraInicio: fechaHora,
+      psicologo: { id: psicologoId },
+    });
+
+    return await this.agendaRepository.save(bloque);
   }
 
-  findAll() {
-    return `This action returns all agenda`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} agenda`;
-  }
-
-  update(id: number, updateAgendaDto: UpdateAgendaDto) {
-    return `This action updates a #${id} agenda`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} agenda`;
+  
+  async obtenerDisponiblesPorPsicologo(psicologoId: string): Promise<Agenda[]> {
+    return await this.agendaRepository.find({
+      where: {
+        psicologo: { id: psicologoId },
+        estaReservado: false,
+      },
+      order: { fechaHoraInicio: 'ASC' },
+    });
   }
 }
