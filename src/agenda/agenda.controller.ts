@@ -1,34 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { AgendaService } from './agenda.service';
-import { CreateAgendaDto } from './dto/create-agenda.dto';
-import { UpdateAgendaDto } from './dto/update-agenda.dto';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { PsicologosService } from '../psicologos/psicologos.service';
+import { Psicologo } from '../psicologos/psicologo.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('agenda')
-export class AgendaController {
-  constructor(private readonly agendaService: AgendaService) {}
+@Controller('psicologos')
+export class PsicologosController {
+  constructor(private readonly psicologosService: PsicologosService) {}
 
-  @Post()
-  create(@Body() createAgendaDto: CreateAgendaDto) {
-    return this.agendaService.create(createAgendaDto);
-  }
-
+  
   @Get()
-  findAll() {
-    return this.agendaService.findAll();
+  listarTodos() {
+    return this.psicologosService.listarTodos();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.agendaService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAgendaDto: UpdateAgendaDto) {
-    return this.agendaService.update(+id, updateAgendaDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.agendaService.remove(+id);
+  
+  @UseGuards(JwtAuthGuard)
+  @Post('perfil/:usuarioId')
+  crearPerfil(
+    @Param('usuarioId') usuarioId: string,
+    @Body() datosProf: Partial<Psicologo>
+  ) {
+    return this.psicologosService.crearPerfil(usuarioId, datosProf);
   }
 }

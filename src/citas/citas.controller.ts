@@ -1,34 +1,28 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, UseGuards } from '@nestjs/common';
 import { CitasService } from './citas.service';
-import { CreateCitaDto } from './dto/create-cita.dto';
-import { UpdateCitaDto } from './dto/update-cita.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('citas')
+@UseGuards(JwtAuthGuard)
 export class CitasController {
   constructor(private readonly citasService: CitasService) {}
 
+  
   @Post()
-  create(@Body() createCitaDto: CreateCitaDto) {
-    return this.citasService.create(createCitaDto);
+  async reservarCita(
+    @Req() req,
+    @Body('agendaId') agendaId: string,
+    @Body('motivoConsulta') motivoConsulta: string,
+  ) {
+    const pacienteId = req.user.id; // ID extraído del token JWT
+    return this.citasService.agendarCita(pacienteId, agendaId, motivoConsulta);
   }
 
-  @Get()
-  findAll() {
-    return this.citasService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.citasService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCitaDto: UpdateCitaDto) {
-    return this.citasService.update(+id, updateCitaDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.citasService.remove(+id);
+  
+  @Get('mis-citas')
+  async listarMisCitas(@Req() req) {
+    const usuarioId = req.user.id;
+    const rol = req.user.rol; 
+    return this.citasService.listarMisCitas(usuarioId, rol);
   }
 }
