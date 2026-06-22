@@ -28,15 +28,15 @@ export class CitasService {
       throw new BadRequestException('Este horario ya ha sido reservado.');
     }
 
-    // 2. Marcar el horario como reservado
+    
     agenda.estaReservado = true;
     await this.agendaRepository.save(agenda);
 
-    // 3. Crear la cita formal
+    
     const nuevaCita = this.citaRepository.create({
       fechaHora: agenda.fechaHoraInicio,
       motivoConsulta: motivo,
-      paciente: { id: pacienteId }, // El ID viene del JWT del paciente
+      paciente: { id: pacienteId }, 
       psicologo: agenda.psicologo,
       estado: 'PENDIENTE',
     });
@@ -44,7 +44,7 @@ export class CitasService {
     return await this.citaRepository.save(nuevaCita);
   }
 
-  // Historial de citas para un Paciente o Psicólogo
+  
   async listarMisCitas(usuarioId: string, rol: string): Promise<Cita[]> {
     if (rol === 'PSICOLOGO') {
       return await this.citaRepository.find({
