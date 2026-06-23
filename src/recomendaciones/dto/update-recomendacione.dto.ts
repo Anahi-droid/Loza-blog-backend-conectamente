@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateRecomendacioneDto } from './create-recomendacione.dto';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateRecomendacionDto } from './create-recomendacion.dto';
 
-export class UpdateRecomendacioneDto extends PartialType(CreateRecomendacioneDto) {}
+export class UpdateRecomendacionDto extends PartialType(CreateRecomendacionDto) {}
