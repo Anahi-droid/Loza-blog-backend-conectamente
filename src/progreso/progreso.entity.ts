@@ -11,31 +11,31 @@ import { Historial } from '../historial/historial.entity';
 
 @Entity('progresos')
 export class Progreso {
-  @PrimaryGeneratedColumn('increment') 
-  id: number;
+  @PrimaryGeneratedColumn('uuid') 
+  id?: string;
 
-  @Column({ name: 'historial_id', type: 'int' })
-  historialId: number;
+  @Column({ name: 'historial_id', type: 'uuid' }) 
+  historialId?: string;
 
   @Column({ type: 'timestamp' })
-  fecha: Date;
+  fecha?: Date;
 
   @Column({ type: 'varchar', length: 255 })
-  estadoEmocional: string;
+  estadoEmocional?: string;
 
   @Column({ type: 'text' })
-  avance: string;
+  avance?: string;
 
   @Column({ type: 'text', nullable: true })
-  observaciones: string;
+  observaciones?: string;
 
   @ManyToOne(() => Historial, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'historial_id' })
-  historial: Historial;
+  historial?: Historial;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt?: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt?: Date;
 }

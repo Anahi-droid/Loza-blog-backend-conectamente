@@ -7,19 +7,19 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Usuario } from '../../usuarios/usuario.entity';
-import { Psicologo } from '../../psicologos/psicologo.entity';
+import { Usuario } from '../usuarios/usuario.entity';
+import { Psicologo } from '../psicologos/psicologo.entity';
 
 @Entity('historiales')
 export class Historial {
-  @PrimaryGeneratedColumn('increment') 
-  id?: number;
+  @PrimaryGeneratedColumn('uuid') 
+  id?: string;
 
-  @Column({ name: 'paciente_id', type: 'int' }) 
-  pacienteId?: number;
+  @Column({ name: 'paciente_id', type: 'uuid' }) 
+  pacienteId?: string;
 
-  @Column({ name: 'psicologo_id', type: 'int' }) 
-  psicologoId?: number;
+  @Column({ name: 'psicologo_id', type: 'uuid' }) 
+  psicologoId?: string;
 
   @Column({ type: 'timestamp' })
   fechaSesion?: Date;
@@ -32,11 +32,11 @@ export class Historial {
 
   @ManyToOne(() => Usuario, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'paciente_id' })
-  paciente: Usuario;
+  paciente?: Usuario;
 
   @ManyToOne(() => Psicologo, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'psicologo_id' })
-  psicologo: Psicologo;
+  psicologo?: Psicologo;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt?: Date;

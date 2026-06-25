@@ -7,40 +7,40 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Usuario } from '../../usuarios/usuario.entity';
-import { Psicologo } from '../../psicologos/psicologo.entity';
+import { Usuario } from '../usuarios/usuario.entity';
+import { Psicologo } from '../psicologos/psicologo.entity';
 
 @Entity('recomendaciones')
 export class Recomendacion {
-  @PrimaryGeneratedColumn('increment') 
-  id: number;
+  @PrimaryGeneratedColumn('uuid') 
+  id?: string;
 
-  @Column({ name: 'paciente_id', type: 'int' })
-  pacienteId: number;
+  @Column({ name: 'paciente_id', type: 'uuid' }) 
+  pacienteId?: string;
 
-  @Column({ name: 'psicologo_id', type: 'int' }) 
-  psicologoId: number;
+  @Column({ name: 'psicologo_id', type: 'uuid' }) 
+  psicologoId?: string;
 
   @Column({ type: 'timestamp' })
-  fecha: Date;
+  fecha?: Date;
 
   @Column({ type: 'varchar', length: 255 })
-  titulo: string;
+  titulo?: string;
 
   @Column({ type: 'text' })
-  descripcion: string;
+  descripcion?: string;
 
   @ManyToOne(() => Usuario, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'paciente_id' })
-  paciente: Usuario;
+  paciente?: Usuario;
 
   @ManyToOne(() => Psicologo, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'psicologo_id' })
-  psicologo: Psicologo;
+  psicologo?: Psicologo;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt?: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt?: Date;
 }
