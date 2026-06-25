@@ -1,63 +1,67 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Cita } from '../citas/cita.entity';
-import { Agenda } from '../agenda/agenda.entity';
+import { Usuario, Rol } from '../usuarios/usuario.entity';
 
 @Injectable()
-export class CitasService {
+export class UsuariosService {
   constructor(
-    @InjectRepository(Cita)
-    private citaRepository: Repository<Cita>,
-    @InjectRepository(Agenda)
-    private agendaRepository: Repository<Agenda>,
+    @InjectRepository(Usuario)
+    private usuarioRepository: Repository<Usuario>,
   ) {}
 
-  async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
-    
-    const agenda = await this.agendaRepository.findOne({
-      where: { id: agendaId },
-      relations: ['psicologo'],
+  
+  async buscarPorId(id: string): Promise<Usuario> {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { id },
+      relations: ['perfilPsicologo'], 
     });
 
-    if (!agenda) {
-      throw new NotFoundException('El horario seleccionado no existe.');
-    }
-
-    if (agenda.estaReservado) {
-      throw new BadRequestException('Este horario ya ha sido reservado.');
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado.`);
     }
 
     
-    agenda.estaReservado = true;
-    await this.agendaRepository.save(agenda);
-
-    
-    const nuevaCita = this.citaRepository.create({
-      fechaHora: agenda.fechaHoraInicio,
-      motivoConsulta: motivo,
-      paciente: { id: pacienteId }, 
-      psicologo: agenda.psicologo,
-      estado: 'PENDIENTE',
-    });
-
-    return await this.citaRepository.save(nuevaCita);
+    delete usuario.password;
+    return usuario;
   }
 
   
-  async listarMisCitas(usuarioId: string, rol: string): Promise<Cita[]> {
-    if (rol === 'PSICOLOGO') {
-      return await this.citaRepository.find({
-        where: { psicologo: { usuario: { id: usuarioId } } },
-        relations: ['paciente'],
-        order: { fechaHora: 'DESC' },
-      });
-    } else {
-      return await this.citaRepository.find({
-        where: { paciente: { id: usuarioId } },
-        relations: ['psicologo', 'psicologo.usuario'],
-        order: { fechaHora: 'DESC' },
-      });
+  async buscarPorEmail(email: string): Promise<Usuario> {
+    const usuario = await this.usuarioRepository.findOne({ where: { email } });
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con email ${email} no encontrado.`);
     }
+    return usuario;
+  }
+
+  
+  async listarPorRol(rol: Rol): Promise<Usuario[]> {
+    return await this.usuarioRepository.find({
+      where: { rol, activo: true },
+      order: { nombre: 'ASC' },
+    });
+  }
+
+  
+  async actualizarPerfil(id: string, datosActualizar: Partial<Usuario>): Promise<Usuario> {
+    const usuario = await this.buscarPorId(id);
+
+    
+    if (datosActualizar.rol || datosActualizar.email) {
+      throw new BadRequestException('No puedes modificar el rol o el email desde este endpoint.');
+    }
+
+    
+    const usuarioEditado = this.usuarioRepository.merge(usuario, datosActualizar);
+    return await this.usuarioRepository.save(usuarioEditado);
+  }
+
+  
+  async desactivarUsuario(id: string): Promise<{ mensaje: string }> {
+    const usuario = await this.buscarPorId(id);
+    usuario.activo = false;
+    await this.usuarioRepository.save(usuario);
+    return { mensaje: 'Usuario desactivado correctamente.' };
   }
 }
