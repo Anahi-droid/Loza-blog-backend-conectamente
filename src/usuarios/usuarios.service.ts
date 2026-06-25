@@ -14,7 +14,7 @@ export class CitasService {
   ) {}
 
   async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
-    // 1. Verificar si el bloque de agenda existe y traer la relación del psicólogo
+    
     const agenda = await this.agendaRepository.findOne({
       where: { id: agendaId },
       relations: ['psicologo'],
