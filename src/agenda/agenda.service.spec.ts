@@ -1,18 +1,65 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AgendaService } from './agenda.service';
+import { AgendasService } from './agenda.service';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Agenda } from './agenda.entity';
+import { Repository } from 'typeorm';
+import { ConflictException } from '@nestjs/common';
 
-describe('AgendaService', () => {
-  let service: AgendaService;
+describe('AgendasService', () => {
+  let service: AgendasService;
+  let repository: Repository<Agenda>;
+
+  const mockAgendaRepository = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AgendaService],
+      providers: [
+        AgendasService,
+        {
+          provide: getRepositoryToken(Agenda),
+          useValue: mockAgendaRepository,
+        },
+      ],
     }).compile();
 
-    service = module.get<AgendaService>(AgendaService);
+    service = module.get<AgendasService>(AgendasService);
+    repository = module.get<Repository<Agenda>>(getRepositoryToken(Agenda));
   });
 
-  it('should be defined', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('debe estar definido el servicio', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('crearDisponibilidad', () => {
+    it('debe lanzar ConflictException si el horario ya existe', async () => {
+      const fecha = new Date();
+      mockAgendaRepository.findOne.mockResolvedValue(new Agenda());
+
+      await expect(service.crearDisponibilidad('psico-123', fecha)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('debe crear y retornar un bloque de agenda si no existe duplicado', async () => {
+      const fecha = new Date();
+      const mockBloque = { id: 'agenda-uuid', fechaHoraInicio: fecha, estaReservado: false };
+      
+      mockAgendaRepository.findOne.mockResolvedValue(null);
+      mockAgendaRepository.create.mockReturnValue(mockBloque);
+      mockAgendaRepository.save.mockResolvedValue(mockBloque);
+
+      const resultado = await service.crearDisponibilidad('psico-123', fecha);
+      expect(resultado).toEqual(mockBloque);
+      expect(mockAgendaRepository.save).toHaveBeenCalledTimes(1);
+    });
   });
 });

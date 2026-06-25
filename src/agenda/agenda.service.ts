@@ -1,7 +1,7 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Agenda } from '../agenda/agenda.entity';
+import { Agenda } from './agenda.entity';
 
 @Injectable()
 export class AgendasService {
