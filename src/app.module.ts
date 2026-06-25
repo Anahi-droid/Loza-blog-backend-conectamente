@@ -1,14 +1,21 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { CitasModule } from './citas/citas.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { PsicologosModule } from './psicologos/psicologos.module';
-import { AgendaModule } from './agenda/agenda.module';
+import { AgendasModule } from './agenda/agenda.module';
+import { CitasModule } from './citas/citas.module';
+import { AuthModule } from './auth/auth.module'; // El que ya tenían hecho
 
 @Module({
-  imports: [CitasModule, UsuariosModule, PsicologosModule, AgendaModule],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    TypeOrmModule.forRoot({
+      
+    }),
+    UsuariosModule,
+    PsicologosModule,
+    AgendasModule,
+    CitasModule,
+    AuthModule,
+  ],
 })
 export class AppModule {}
