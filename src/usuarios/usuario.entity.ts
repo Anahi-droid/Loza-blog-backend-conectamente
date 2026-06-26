@@ -4,11 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToOne,
-  OneToMany,
 } from 'typeorm';
-import { Psicologo } from '../psicologos/psicologo.entity';
-import { Cita } from '../citas/cita.entity';
 
 export type Rol = 'PACIENTE' | 'PSICOLOGO' | 'ADMIN';
 
@@ -21,7 +17,7 @@ export class Usuario {
   email?: string;
 
   @Column()
-  password?: string; // Opcional por si en algún find lo excluyes
+  password?: string;
 
   @Column()
   nombre?: string;
@@ -34,14 +30,6 @@ export class Usuario {
 
   @Column({ default: true })
   activo?: boolean;
-
-  
-  @OneToOne(() => Psicologo, (psicologo) => psicologo.usuario, { cascade: true })
-  perfilPsicologo?: Psicologo;
-
-  
-  @OneToMany(() => Cita, (cita) => cita.paciente)
-  citas?: Cita[];
 
   @CreateDateColumn()
   creadoEn?: Date;

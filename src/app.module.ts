@@ -1,21 +1,33 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsuariosModule } from './usuarios/usuarios.module';
-import { PsicologosModule } from './psicologos/psicologos.module';
-import { AgendasModule } from './agenda/agenda.module';
-import { CitasModule } from './citas/citas.module';
-import { AuthModule } from './auth/auth.module'; // El que ya tenían hecho
+import { AuthModule } from './auth/auth.module';
+import { PerfilModule } from './perfil/perfil.module';
+import { AdminModule } from './admin/admin.module';
+import { Usuario } from './usuarios/usuario.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get('DB_HOST'),
+        port: config.get<number>('DB_PORT'),
+        username: config.get('DB_USER'),
+        password: config.get('DB_PASSWORD'),
+        database: config.get('DB_NAME'),
+        entities: [Usuario],
+        synchronize: config.get('NODE_ENV') !== 'production',
+      }),
     }),
     UsuariosModule,
-    PsicologosModule,
-    AgendasModule,
-    CitasModule,
     AuthModule,
+    PerfilModule,
+    AdminModule,
   ],
 })
 export class AppModule {}
