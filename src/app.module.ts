@@ -15,6 +15,10 @@ import { Historial } from './historial/historial.entity';
 import { Progreso } from './progreso/progreso.entity';
 import { Recomendacion } from './recomendaciones/recomendacion.entity';
 import { Agenda } from './agenda/agenda.entity';
+import { Especialidad } from './especialidades/especialidade.entity'; 
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { EncuestasModule } from './encuestas/encuestas.module';
+import { EspecialidadesModule } from './especialidades/especialidades.module';
 
 @Module({
   imports: [
@@ -29,7 +33,7 @@ import { Agenda } from './agenda/agenda.entity';
         username: config.get('DB_USER'),
         password: config.get('DB_PASS'), 
         database: config.get('DB_NAME'),
-        entities: [Usuario, Psicologo, Cita, Historial, Progreso, Recomendacion, Agenda], 
+        entities: [Usuario, Psicologo, Cita, Historial, Progreso, Recomendacion, Agenda, Especialidad], 
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
     }),
@@ -40,6 +44,9 @@ import { Agenda } from './agenda/agenda.entity';
     HistorialModule,
     ProgresoModule,
     RecomendacionesModule,
+    NotificacionesModule,
+    EncuestasModule,
+    EspecialidadesModule,
   ],
 })
 export class AppModule {}
