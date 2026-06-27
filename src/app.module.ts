@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose'; // <-- 1. IMPORTA EL MÓDULO DE MONGOOSE
+
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { AuthModule } from './auth/auth.module';
 import { PerfilModule } from './perfil/perfil.module';
@@ -23,6 +25,8 @@ import { EspecialidadesModule } from './especialidades/especialidades.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    
+    // Conexión Relacional (PostgreSQL)
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,6 +41,15 @@ import { EspecialidadesModule } from './especialidades/especialidades.module';
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
     }),
+    // Conxion a mongo db :)
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.get<string>('MONGO_URI'),
+      }),
+    }),
+
     UsuariosModule,
     AuthModule,
     PerfilModule,
