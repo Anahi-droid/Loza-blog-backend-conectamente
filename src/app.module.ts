@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose'; // <-- 1. IMPORTA EL MÓDULO DE MONGOOSE
+
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { AuthModule } from './auth/auth.module';
 import { PerfilModule } from './perfil/perfil.module';
@@ -16,12 +18,16 @@ import { Historial } from './historial/historial.entity';
 import { Progreso } from './progreso/progreso.entity';
 import { Recomendacion } from './recomendaciones/recomendacion.entity';
 import { Agenda } from './agenda/agenda.entity';
-import { ChatsModule } from './chats/chats.module';
-import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometricos.module';
+import { Especialidad } from './especialidades/especialidade.entity'; 
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { EncuestasModule } from './encuestas/encuestas.module';
+import { EspecialidadesModule } from './especialidades/especialidades.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    
+    // Conexión Relacional (PostgreSQL)
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -32,17 +38,19 @@ import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometri
         username: config.get('DB_USER'),
         password: config.get('DB_PASS'), 
         database: config.get('DB_NAME'),
-        entities: [Usuario, Psicologo, Cita, Historial, Progreso, Recomendacion, Agenda], 
+        entities: [Usuario, Psicologo, Cita, Historial, Progreso, Recomendacion, Agenda, Especialidad], 
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
     }),
+    // Conxion a mongo db :)
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>('MONGO_URI') || 'mongodb://localhost:27017/conectamente',
+        uri: config.get<string>('MONGO_URI'),
       }),
     }),
+
     UsuariosModule,
     AuthModule,
     PerfilModule,
@@ -50,8 +58,9 @@ import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometri
     HistorialModule,
     ProgresoModule,
     RecomendacionesModule,
-    ChatsModule,
-    TestsPsicometricosModule,
+    NotificacionesModule,
+    EncuestasModule,
+    EspecialidadesModule,
   ],
 })
 export class AppModule {}

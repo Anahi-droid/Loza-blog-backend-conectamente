@@ -5,11 +5,13 @@ import {
   OneToOne,
   JoinColumn,
   OneToMany,
+  ManyToMany,
+  JoinTable
 } from 'typeorm';
 import { Usuario } from '../usuarios/usuario.entity';
 import { Agenda } from '../agenda/agenda.entity';
 import { Cita } from '../citas/cita.entity';
-import { DisponibilidadExcepcion } from './disponibilidad-excepcion.entity'; 
+import { Especialidad } from '../especialidades/especialidade.entity'; 
 
 @Entity('psicologos')
 export class Psicologo {
@@ -19,24 +21,23 @@ export class Psicologo {
   @Column({ unique: true })
   numColegiatura?: string; 
 
-  @Column()
+  @Column({ nullable: true })
   especialidad?: string;
 
   @Column({ type: 'text', nullable: true })
   biografia?: string;
 
-  
   @OneToOne(() => Usuario, (usuario) => usuario.perfilPsicologo, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuario_id' }) 
   usuario?: Usuario;
 
-  
   @OneToMany(() => Agenda, (agenda) => agenda.psicologo)
   agendas?: Agenda[];
 
   @OneToMany(() => Cita, (cita) => cita.psicologo)
   citas?: Cita[];
 
-  @OneToMany(() => DisponibilidadExcepcion, (excepcion) => excepcion.psicologo)
-  excepciones?: DisponibilidadExcepcion[];
+  @ManyToMany(() => Especialidad, (especialidad) => especialidad.psicologos, { cascade: true })
+  @JoinTable({ name: 'psicologos_especialidades' })
+  especialidades?: Especialidad[];
 }
