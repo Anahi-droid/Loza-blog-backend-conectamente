@@ -1,31 +1,41 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common'; 
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { EspecialidadesService } from './especialidades.service';
 import { CreateEspecialidadDto } from './dto/create-especialidade.dto'; 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
+import { UpdateEspecialidadeDto } from './dto/update-especialidade.dto';
 
 @ApiTags('especialidades')
-@ApiBearerAuth('jwt-auth') 
 @Controller('especialidades')
 export class EspecialidadesController {
-  constructor(private readonly especialidadesService: EspecialidadesService) {}
+  constructor(private readonly tableEspecialidadesService: EspecialidadesService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard) 
-  @ApiOperation({ summary: 'Crear una nueva especialidad (Solo ADMIN)' })
+  @ApiOperation({ summary: 'Crear una nueva especialidad (PÚBLICO PARA TEST)' })
   create(@Body() createEspecialidadDto: CreateEspecialidadDto) {
-    return this.especialidadesService.create(createEspecialidadDto);
+    return this.tableEspecialidadesService.create(createEspecialidadDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Listar todas las especialidades disponibles' })
   findAll() {
-    return this.especialidadesService.findAll();
+    return this.tableEspecialidadesService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener detalles de una especialidad por ID' })
   findOne(@Param('id') id: string) {
-    return this.especialidadesService.findOne(id);
+    return this.tableEspecialidadesService.findOne(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar una especialidad por ID' })
+  update(@Param('id') id: string, @Body() updateEspecialidadeDto: UpdateEspecialidadeDto) {
+    return this.tableEspecialidadesService.update(id, updateEspecialidadeDto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar una especialidad por ID' })
+  remove(@Param('id') id: string) {
+    return this.tableEspecialidadesService.remove(id);
   }
 }
