@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Put, Delete, Get, Post, Body, Param, Patch, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificacionesService } from './notificaciones.service';
 import { CreateNotificacionDto } from './dto/create-notificacione.dto';

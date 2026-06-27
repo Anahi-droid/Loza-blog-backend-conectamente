@@ -28,10 +28,14 @@ export class ChatsService {
     .exec();
   }
 
-  async actualizarMensaje(remitenteId: string, mensajeId: string, updateDto: UpdateChatDto): Promise<Chat> {
+  // 💡 Agregamos '| null' a la promesa de retorno
+  async actualizarMensaje(remitenteId: string, mensajeId: string, updateDto: UpdateChatDto): Promise<Chat | null> {
     const mensaje = await this.chatModel.findById(mensajeId).exec();
     if (!mensaje) return null;
-    if (mensaje.remitenteId.toString() !== remitenteId) return null;
+    
+    // 💡 Usamos ?.toString() para evitar el error de 'possibly undefined'
+    if (mensaje.remitenteId?.toString() !== remitenteId) return null;
+    
     if (updateDto.mensaje !== undefined) mensaje.mensaje = updateDto.mensaje;
     return mensaje.save();
   }
@@ -39,7 +43,10 @@ export class ChatsService {
   async eliminarMensaje(remitenteId: string, mensajeId: string): Promise<{ deleted: boolean }> {
     const mensaje = await this.chatModel.findById(mensajeId).exec();
     if (!mensaje) return { deleted: false };
-    if (mensaje.remitenteId.toString() !== remitenteId) return { deleted: false };
+    
+    // 💡 Usamos ?.toString() para asegurar la validación sin romper la ejecución
+    if (mensaje.remitenteId?.toString() !== remitenteId) return { deleted: false };
+    
     await this.chatModel.deleteOne({ _id: mensajeId }).exec();
     return { deleted: true };
   }

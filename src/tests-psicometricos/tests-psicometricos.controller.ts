@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { TestsPsicometricosService } from './tests-psicometricos.service';
 import { CreateTestResultadoDto } from './dto/create-test-resultado.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
