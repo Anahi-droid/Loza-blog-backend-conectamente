@@ -6,7 +6,6 @@ import * as bcrypt from 'bcrypt';
 import { UsuariosService } from './usuarios.service';
 import { Usuario } from './usuario.entity';
 
-// ── Fábrica de mocks ──────────────────────────────────────────────────────
 
 const mockUsuario = (): Usuario => ({
   id: 'uuid-test-001',
@@ -28,7 +27,7 @@ const mockRepo = () => ({
   createQueryBuilder: jest.fn(),
 });
 
-// ── Suite principal ───────────────────────────────────────────────────────
+
 
 describe('UsuariosService', () => {
   let service: UsuariosService;
