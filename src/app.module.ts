@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsuariosModule } from './usuarios/usuarios.module';
@@ -15,6 +16,9 @@ import { Historial } from './historial/historial.entity';
 import { Progreso } from './progreso/progreso.entity';
 import { Recomendacion } from './recomendaciones/recomendacion.entity';
 import { Agenda } from './agenda/agenda.entity';
+import { DisponibilidadExcepcion } from './psicologos/entities/disponibilidad-excepcion.entity';
+import { ChatsModule } from './chats/chats.module';
+import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometricos.module';
 
 @Module({
   imports: [
@@ -33,6 +37,13 @@ import { Agenda } from './agenda/agenda.entity';
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
     }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.get<string>('MONGO_URI') || 'mongodb://localhost:27017/conectamente',
+      }),
+    }),
     UsuariosModule,
     AuthModule,
     PerfilModule,
@@ -40,6 +51,8 @@ import { Agenda } from './agenda/agenda.entity';
     HistorialModule,
     ProgresoModule,
     RecomendacionesModule,
+    ChatsModule,
+    TestsPsicometricosModule,
   ],
 })
 export class AppModule {}

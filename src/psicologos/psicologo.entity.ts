@@ -9,6 +9,7 @@ import {
 import { Usuario } from '../usuarios/usuario.entity';
 import { Agenda } from '../agenda/agenda.entity';
 import { Cita } from '../citas/cita.entity';
+import { DisponibilidadExcepcion } from './disponibilidad-excepcion.entity'; 
 
 @Entity('psicologos')
 export class Psicologo {
@@ -26,7 +27,7 @@ export class Psicologo {
 
   
   @OneToOne(() => Usuario, (usuario) => usuario.perfilPsicologo, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'usuario_id' }) // Crea la columna FK 'usuario_id' en esta tabla
+  @JoinColumn({ name: 'usuario_id' }) 
   usuario?: Usuario;
 
   
