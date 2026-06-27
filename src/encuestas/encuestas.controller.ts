@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EncuestasService } from './encuestas.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
+import { CreateEncuestaDto } from './dto/create-encuesta.dto';
+import { CreateRespuestaDto } from './dto/create-respuesta.dto';
 
 @ApiTags('encuestas')
 @ApiBearerAuth('jwt-auth')
@@ -12,7 +14,7 @@ export class EncuestasController {
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva plantilla de encuesta con preguntas dinámicas' })
-  create(@Body() createEncuestaDto: any) {
+  create(@Body() createEncuestaDto: CreateEncuestaDto) {
     return this.encuestasService.create(createEncuestaDto);
   }
 
@@ -26,9 +28,9 @@ export class EncuestasController {
   @ApiOperation({ summary: 'Guardar las respuestas de un paciente para una encuesta' })
   guardarRespuesta(
     @Param('id') encuestaId: string,
-    @Body('usuarioId') usuarioId: string,
-    @Body('respuestas') respuestas: any,
+    @Body() createRespuestaDto: CreateRespuestaDto,
   ) {
+    const { usuarioId, respuestas } = createRespuestaDto;
     return this.encuestasService.guardarRespuesta(encuestaId, usuarioId, respuestas);
   }
 
