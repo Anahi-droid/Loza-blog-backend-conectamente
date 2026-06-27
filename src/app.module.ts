@@ -14,6 +14,7 @@ import { Cita } from './citas/cita.entity';
 import { Historial } from './historial/historial.entity';
 import { Progreso } from './progreso/progreso.entity';
 import { Recomendacion } from './recomendaciones/recomendacion.entity';
+import { Agenda } from './agenda/agenda.entity';
 
 @Module({
   imports: [
@@ -26,9 +27,9 @@ import { Recomendacion } from './recomendaciones/recomendacion.entity';
         host: config.get('DB_HOST'),
         port: config.get<number>('DB_PORT'),
         username: config.get('DB_USER'),
-        password: config.get('DB_PASSWORD'),
+        password: config.get('DB_PASS'), 
         database: config.get('DB_NAME'),
-        entities: [Usuario, Psicologo, Cita, Historial, Progreso, Recomendacion],
+        entities: [Usuario, Psicologo, Cita, Historial, Progreso, Recomendacion, Agenda], 
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
     }),

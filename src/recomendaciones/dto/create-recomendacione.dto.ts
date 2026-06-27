@@ -1,23 +1,23 @@
-import { IsInt, IsNotEmpty, IsDateString, IsString } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsDateString, IsString } from 'class-validator';
 
 export class CreateRecomendacionDto {
-  @IsInt()
-  @IsNotEmpty()
-  pacienteId: number;
+  @IsUUID('4', { message: 'El pacienteId debe ser un UUID válido' })
+  @IsNotEmpty({ message: 'El id del paciente es requerido' })
+  pacienteId: string;
 
-  @IsInt()
-  @IsNotEmpty()
-  psicologoId: number;
+  @IsUUID('4', { message: 'El psicologoId debe ser un UUID válido' })
+  @IsNotEmpty({ message: 'El id del psicólogo es requerido' })
+  psicologoId: string;
 
-  @IsDateString()
-  @IsNotEmpty()
+  @IsDateString({}, { message: 'La fecha debe ser una cadena ISO válida' })
+  @IsNotEmpty({ message: 'La fecha de asignación es requerida' })
   fecha: Date;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'El título de la recomendación es requerido' })
   titulo: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'La descripción no puede estar vacía' })
   descripcion: string;
 }

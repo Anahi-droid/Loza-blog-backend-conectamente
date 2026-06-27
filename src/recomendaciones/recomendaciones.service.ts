@@ -1,26 +1,44 @@
-import { Injectable } from '@nestjs/common';
-import { CreateRecomendacioneDto } from './dto/create-recomendacione.dto';
-import { UpdateRecomendacioneDto } from './dto/update-recomendacione.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Recomendacion } from './recomendacion.entity';
+import { CreateRecomendacionDto } from './dto/create-recomendacione.dto';
 
 @Injectable()
 export class RecomendacionesService {
-  create(createRecomendacioneDto: CreateRecomendacioneDto) {
-    return 'This action adds a new recomendacione';
+  constructor(
+    @InjectRepository(Recomendacion)
+    private readonly recomendacionRepository: Repository<Recomendacion>,
+  ) {}
+
+  async create(createRecomendacionDto: CreateRecomendacionDto): Promise<Recomendacion> {
+    const nuevaRecomendacion = this.recomendacionRepository.create({
+      ...createRecomendacionDto,
+      paciente: { id: createRecomendacionDto.pacienteId ? String(createRecomendacionDto.pacienteId) : undefined },
+      psicologo: { id: createRecomendacionDto.psicologoId ? String(createRecomendacionDto.psicologoId) : undefined },
+    });
+    return await this.recomendacionRepository.save(nuevaRecomendacion);
   }
 
-  findAll() {
-    return `This action returns all recomendaciones`;
+  async findAll(): Promise<Recomendacion[]> {
+    return await this.recomendacionRepository.find({
+      relations: { paciente: true, psicologo: true },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} recomendacione`;
+  async findOne(id: string): Promise<Recomendacion> {
+    const recomendacion = await this.recomendacionRepository.findOne({
+      where: { id: Number(id) as any },
+      relations: { paciente: true, psicologo: true },
+    });
+    if (!recomendacion) throw new NotFoundException(`Recomendación con ID ${id} no encontrada`);
+    return recomendacion;
   }
 
-  update(id: number, updateRecomendacioneDto: UpdateRecomendacioneDto) {
-    return `This action updates a #${id} recomendacione`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} recomendacione`;
+  async findByPaciente(pacienteId: string): Promise<Recomendacion[]> {
+    return await this.recomendacionRepository.find({
+      where: { pacienteId: Number(pacienteId) as any },
+      relations: { psicologo: true },
+    });
   }
 }

@@ -16,7 +16,7 @@ export class CitasService {
   async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
     const agenda = await this.agendaRepository.findOne({
       where: { id: agendaId },
-      relations: ['psicologo'],
+      relations: { psicologo: true },
     });
 
     if (!agenda) {
@@ -27,11 +27,9 @@ export class CitasService {
       throw new BadRequestException('Este horario ya ha sido reservado.');
     }
 
-
     agenda.estaReservado = true;
     await this.agendaRepository.save(agenda);
 
-    
     const nuevaCita = this.citaRepository.create({
       fechaHora: agenda.fechaHoraInicio,
       motivoConsulta: motivo,
@@ -43,18 +41,17 @@ export class CitasService {
     return await this.citaRepository.save(nuevaCita);
   }
 
-  
   async listarMisCitas(usuarioId: string, rol: string): Promise<Cita[]> {
     if (rol === 'PSICOLOGO') {
       return await this.citaRepository.find({
         where: { psicologo: { usuario: { id: usuarioId } } },
-        relations: ['paciente'],
+        relations: { paciente: true },
         order: { fechaHora: 'DESC' },
       });
     } else {
       return await this.citaRepository.find({
         where: { paciente: { id: usuarioId } },
-        relations: ['psicologo', 'psicologo.usuario'],
+        relations: { psicologo: { usuario: true } },
         order: { fechaHora: 'DESC' },
       });
     }

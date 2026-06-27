@@ -4,7 +4,11 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
+  OneToMany,
 } from 'typeorm';
+import { Psicologo } from '../psicologos/psicologo.entity';
+import { Cita } from '../citas/cita.entity';
 
 export type Rol = 'PACIENTE' | 'PSICOLOGO' | 'ADMIN';
 
@@ -30,6 +34,12 @@ export class Usuario {
 
   @Column({ default: true })
   activo?: boolean;
+
+  @OneToOne(() => Psicologo, (psicologo) => psicologo.usuario)
+  perfilPsicologo?: Psicologo;
+
+  @OneToMany(() => Cita, (cita) => cita.paciente)
+  citas?: Cita[];
 
   @CreateDateColumn()
   creadoEn?: Date;

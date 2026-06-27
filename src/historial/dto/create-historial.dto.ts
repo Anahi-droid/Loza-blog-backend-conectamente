@@ -1,20 +1,20 @@
-import { IsInt, IsNotEmpty, IsDateString, IsString, IsOptional } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsDateString, IsString, IsOptional } from 'class-validator';
 
 export class CreateHistorialDto {
-  @IsInt()
-  @IsNotEmpty()
-  pacienteId?: number;
+  @IsUUID('4', { message: 'El pacienteId debe ser un UUID válido' })
+  @IsNotEmpty({ message: 'El id del paciente es requerido' })
+  pacienteId?: string;
 
-  @IsInt()
-  @IsNotEmpty()
-  psicologoId?: number;
+  @IsUUID('4', { message: 'El psicologoId debe ser un UUID válido' })
+  @IsNotEmpty({ message: 'El id del psicólogo es requerido' })
+  psicologoId?: string;
 
-  @IsDateString()
-  @IsNotEmpty()
+  @IsDateString({}, { message: 'La fecha de la sesión debe ser una cadena ISO válida' })
+  @IsNotEmpty({ message: 'La fecha de sesión es requerida' })
   fechaSesion?: Date;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'El diagnóstico no puede estar vacío' })
   diagnostico?: string;
 
   @IsString()

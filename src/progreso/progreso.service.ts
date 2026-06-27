@@ -1,26 +1,44 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Progreso } from './progreso.entity';
 import { CreateProgresoDto } from './dto/create-progreso.dto';
-import { UpdateProgresoDto } from './dto/update-progreso.dto';
 
 @Injectable()
 export class ProgresoService {
-  create(createProgresoDto: CreateProgresoDto) {
-    return 'This action adds a new progreso';
+  constructor(
+    @InjectRepository(Progreso)
+    private readonly progresoRepository: Repository<Progreso>,
+  ) {}
+
+  async create(createProgresoDto: CreateProgresoDto): Promise<Progreso> {
+    const nuevoProgreso = this.progresoRepository.create({
+      ...createProgresoDto,
+      historial: { id: Number(createProgresoDto.historialId) as any },
+    });
+    return await this.progresoRepository.save(nuevoProgreso);
   }
 
-  findAll() {
-    return `This action returns all progreso`;
+  async findAll(): Promise<Progreso[]> {
+    return await this.progresoRepository.find({
+      relations: { historial: true },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} progreso`;
+  async findOne(id: string): Promise<Progreso> {
+    const progreso = await this.progresoRepository.findOne({
+      where: { id: Number(id) as any },
+      relations: { historial: true },
+    });
+    if (!progreso) throw new NotFoundException(`Progreso con ID ${id} no encontrado`);
+    return progreso;
   }
 
-  update(id: number, updateProgresoDto: UpdateProgresoDto) {
-    return `This action updates a #${id} progreso`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} progreso`;
+  async findByPaciente(pacienteId: string): Promise<Progreso[]> {
+    return await this.progresoRepository.find({
+      where: { historial: { pacienteId: Number(pacienteId) as any } },
+      relations: { historial: true },
+      order: { fecha: 'ASC' },
+    });
   }
 }

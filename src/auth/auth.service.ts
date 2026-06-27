@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { RegisterDto } from './dto/create-auth.dto';
@@ -16,21 +13,23 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    // Los registros públicos son SIEMPRE PACIENTES
     const usuario = await this.usuariosService.crear({
       ...dto,
       rol: 'PACIENTE',
     });
 
-    // No devolvemos la password en la respuesta
     const { password, ...resultado } = usuario;
     return resultado;
   }
 
   async login(dto: LoginDto): Promise<{ accessToken: string }> {
+    if (!dto.email || !dto.password) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
     const usuario = await this.usuariosService.buscarPorEmail(dto.email);
 
-    if (!usuario) {
+    if (!usuario || !usuario.password) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
@@ -44,9 +43,9 @@ export class AuthService {
     }
 
     const payload: JwtPayload = {
-      sub: usuario.id,
-      rol: usuario.rol,
-      email: usuario.email,
+      sub: usuario.id!,
+      rol: usuario.rol!,
+      email: usuario.email!,
     };
 
     return {
