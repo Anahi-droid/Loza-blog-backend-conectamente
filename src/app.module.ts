@@ -10,6 +10,7 @@ import { HistorialModule } from './historial/historial.module';
 import { ProgresoModule } from './progreso/progreso.module';
 import { RecomendacionesModule } from './recomendaciones/recomendaciones.module';
 import { PsicologosModule } from './psicologos/psicologos.module';
+import { AgendaModule } from './agenda/agenda.module';
 import { Usuario } from './usuarios/usuario.entity';
 import { Psicologo } from './psicologos/psicologo.entity';
 import { Cita } from './citas/cita.entity';
@@ -21,6 +22,9 @@ import { Especialidad } from './especialidades/especialidade.entity';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { EncuestasModule } from './encuestas/encuestas.module';
 import { EspecialidadesModule } from './especialidades/especialidades.module';
+
+// 🚀 1. IMPORTAMOS LA ENTIDAD QUE FALTA
+import { DisponibilidadExcepcion } from './psicologos/disponibilidad-excepcion.entity'; 
 
 @Module({
   imports: [
@@ -37,10 +41,22 @@ import { EspecialidadesModule } from './especialidades/especialidades.module';
         username: config.get('DB_USER'),
         password: config.get('DB_PASS'), 
         database: config.get('DB_NAME'),
-        entities: [Usuario, Psicologo, Cita, Historial, Progreso, Recomendacion, Agenda, Especialidad], 
+        // 🚀 2. AGREGASTE DisponibilidadExcepcion AL FINAL DE ESTE ARREGLO:
+        entities: [
+          Usuario, 
+          Psicologo, 
+          Cita, 
+          Historial, 
+          Progreso, 
+          Recomendacion, 
+          Agenda, 
+          Especialidad, 
+          DisponibilidadExcepcion
+        ], 
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
     }),
+    
     // Conxion a mongo db :)
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -61,6 +77,7 @@ import { EspecialidadesModule } from './especialidades/especialidades.module';
     EncuestasModule,
     EspecialidadesModule,
     PsicologosModule,
+    AgendaModule,
   ],
 })
 export class AppModule {}
