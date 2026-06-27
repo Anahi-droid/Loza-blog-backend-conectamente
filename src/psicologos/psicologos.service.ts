@@ -13,7 +13,6 @@ export class PsicologosService {
     private usuarioRepository: Repository<Usuario>,
   ) {}
 
-  
   async crearPerfil(usuarioId: string, datosProf: Partial<Psicologo>): Promise<Psicologo> {
     const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId, rol: 'PSICOLOGO' } });
     
@@ -29,10 +28,9 @@ export class PsicologosService {
     return await this.psicologoRepository.save(nuevoPsicologo);
   }
 
-
   async listarTodos(): Promise<Psicologo[]> {
     return await this.psicologoRepository.find({
-      relations: ['usuario'],
+      relations: { usuario: true },
       where: { usuario: { activo: true } }
     });
   }

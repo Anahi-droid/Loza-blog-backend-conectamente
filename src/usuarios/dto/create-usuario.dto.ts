@@ -5,7 +5,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { Rol } from '../usuario.entity';
+import type { Rol } from '../usuario.entity';
 
 export class CreateUsuarioDto {
   @IsEmail({}, { message: 'El email no tiene un formato válido' })
