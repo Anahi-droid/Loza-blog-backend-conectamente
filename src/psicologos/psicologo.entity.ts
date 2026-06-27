@@ -35,4 +35,7 @@ export class Psicologo {
 
   @OneToMany(() => Cita, (cita) => cita.psicologo)
   citas?: Cita[];
+
+  @OneToMany(() => DisponibilidadExcepcion, (excepcion) => excepcion.psicologo)
+  excepciones?: DisponibilidadExcepcion[];
 }
