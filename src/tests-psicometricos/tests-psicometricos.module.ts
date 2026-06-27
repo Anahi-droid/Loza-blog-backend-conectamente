@@ -12,5 +12,6 @@ import { AuthModule } from '../auth/auth.module';
   ],
   controllers: [TestsPsicometricosController],
   providers: [TestsPsicometricosService],
+  exports: [TestsPsicometricosService],
 })
 export class TestsPsicometricosModule {}
