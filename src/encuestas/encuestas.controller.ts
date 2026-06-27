@@ -25,6 +25,12 @@ export class EncuestasController {
     return this.encuestasService.findAll();
   }
 
+  @Get(':id/respuestas')
+  @ApiOperation({ summary: 'Obtener los resultados de respuestas de una encuesta específica' })
+  obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string) {
+    return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener una encuesta por ID' })
   findOne(@Param('id') id: string) {
@@ -51,11 +57,5 @@ export class EncuestasController {
   @ApiOperation({ summary: 'Eliminar una encuesta por ID' })
   remove(@Param('id') id: string) {
     return this.encuestasService.remove(id);
-  }
-
-  @Get(':id/respuestas')
-  @ApiOperation({ summary: 'Obtener los resultados de respuestas de una encuesta específica' })
-  obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string) {
-    return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId);
   }
 }
