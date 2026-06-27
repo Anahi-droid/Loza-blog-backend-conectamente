@@ -14,6 +14,7 @@ import { AgendaModule } from './agenda/agenda.module';
 import { Usuario } from './usuarios/usuario.entity';
 import { Psicologo } from './psicologos/psicologo.entity';
 import { Cita } from './citas/cita.entity';
+import { CitasModule } from './citas/citas.module'; 
 import { Historial } from './historial/historial.entity';
 import { Progreso } from './progreso/progreso.entity';
 import { Recomendacion } from './recomendaciones/recomendacion.entity';
@@ -78,6 +79,7 @@ import { DisponibilidadExcepcion } from './psicologos/disponibilidad-excepcion.e
     EspecialidadesModule,
     PsicologosModule,
     AgendaModule,
+    CitasModule,
   ],
 })
 export class AppModule {}
