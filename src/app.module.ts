@@ -16,7 +16,6 @@ import { Historial } from './historial/historial.entity';
 import { Progreso } from './progreso/progreso.entity';
 import { Recomendacion } from './recomendaciones/recomendacion.entity';
 import { Agenda } from './agenda/agenda.entity';
-import { DisponibilidadExcepcion } from './psicologos/entities/disponibilidad-excepcion.entity';
 import { ChatsModule } from './chats/chats.module';
 import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometricos.module';
 
