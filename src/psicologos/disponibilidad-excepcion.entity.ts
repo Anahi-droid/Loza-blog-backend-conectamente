@@ -22,7 +22,7 @@ export class DisponibilidadExcepcion {
   @Column({ type: 'varchar', length: 255 })
   motivo?: string;
 
-  @ManyToOne(() => Psicologo, (psicologo) => psicologo.excepciones, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Psicologo, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'psicologo_id' })
   psicologo?: Psicologo;
 

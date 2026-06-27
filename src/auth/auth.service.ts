@@ -13,14 +13,14 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const usuario = await this.usuariosService.crear({
-      ...dto,
-      rol: 'PACIENTE',
-    });
+      const usuario = await this.usuariosService.crear({
+        ...dto,
+        rol: dto.rol || 'PACIENTE', 
+      });
 
-    const { password, ...resultado } = usuario;
-    return resultado;
-  }
+      const { password, ...resultado } = usuario; //
+      return resultado; 
+    }
 
   async login(dto: LoginDto): Promise<{ accessToken: string }> {
     if (!dto.email || !dto.password) {

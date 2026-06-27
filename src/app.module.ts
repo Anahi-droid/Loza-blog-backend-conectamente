@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MongooseModule } from '@nestjs/mongoose'; // <-- 1. IMPORTA EL MÓDULO DE MONGOOSE
-
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { AuthModule } from './auth/auth.module';
 import { PerfilModule } from './perfil/perfil.module';
@@ -11,6 +9,7 @@ import { AdminModule } from './admin/admin.module';
 import { HistorialModule } from './historial/historial.module';
 import { ProgresoModule } from './progreso/progreso.module';
 import { RecomendacionesModule } from './recomendaciones/recomendaciones.module';
+import { PsicologosModule } from './psicologos/psicologos.module';
 import { Usuario } from './usuarios/usuario.entity';
 import { Psicologo } from './psicologos/psicologo.entity';
 import { Cita } from './citas/cita.entity';
@@ -61,6 +60,7 @@ import { EspecialidadesModule } from './especialidades/especialidades.module';
     NotificacionesModule,
     EncuestasModule,
     EspecialidadesModule,
+    PsicologosModule,
   ],
 })
 export class AppModule {}
