@@ -21,7 +21,7 @@ export class Usuario {
   email?: string;
 
   @Column()
-  password?: string; // Opcional por si en algún find lo excluyes
+  password?: string;
 
   @Column()
   nombre?: string;
@@ -35,11 +35,9 @@ export class Usuario {
   @Column({ default: true })
   activo?: boolean;
 
-  
-  @OneToOne(() => Psicologo, (psicologo) => psicologo.usuario, { cascade: true })
+  @OneToOne(() => Psicologo, (psicologo) => psicologo.usuario)
   perfilPsicologo?: Psicologo;
 
-  
   @OneToMany(() => Cita, (cita) => cita.paciente)
   citas?: Cita[];
 

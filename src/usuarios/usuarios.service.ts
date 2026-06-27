@@ -1,67 +1,103 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Usuario, Rol } from './usuario.entity';
+import * as bcrypt from 'bcrypt';
+import { Usuario } from './usuario.entity';
+import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
 @Injectable()
 export class UsuariosService {
+  private readonly SALT_ROUNDS = 10;
+
   constructor(
     @InjectRepository(Usuario)
-    private usuarioRepository: Repository<Usuario>,
+    private readonly usuarioRepo: Repository<Usuario>,
   ) {}
 
-  
-  async buscarPorId(id: string): Promise<Usuario> {
-    const usuario = await this.usuarioRepository.findOne({
-      where: { id },
-      relations: ['perfilPsicologo'], 
+  // ── Utilidad interna ──────────────────────────────────────────────────────
+
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, this.SALT_ROUNDS);
+  }
+
+  async comparePasswords(plain: string, hashed: string): Promise<boolean> {
+    return bcrypt.compare(plain, hashed);
+  }
+
+  // ── Escritura ─────────────────────────────────────────────────────────────
+
+  async crear(dto: CreateUsuarioDto): Promise<Usuario> {
+    const existe = await this.usuarioRepo.findOne({
+      where: { email: dto.email },
     });
-
-    if (!usuario) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado.`);
+    if (existe) {
+      throw new ConflictException(
+        `Ya existe un usuario con el email ${dto.email}`,
+      );
     }
-
-    
-    delete usuario.password;
-    return usuario;
+    if (!dto.password) {
+    throw new BadRequestException('La contraseña es requerida');
+}
+    const passwordHash = await this.hashPassword(dto.password);
+    const usuario = this.usuarioRepo.create({ ...dto, password: passwordHash });
+    return this.usuarioRepo.save(usuario);
   }
 
-  
-  async buscarPorEmail(email: string): Promise<Usuario> {
-    const usuario = await this.usuarioRepository.findOne({ where: { email } });
-    if (!usuario) {
-      throw new NotFoundException(`Usuario con email ${email} no encontrado.`);
-    }
-    return usuario;
-  }
-
-  
-  async listarPorRol(rol: Rol): Promise<Usuario[]> {
-    return await this.usuarioRepository.find({
-      where: { rol, activo: true },
-      order: { nombre: 'ASC' },
-    });
-  }
-
-  
-  async actualizarPerfil(id: string, datosActualizar: Partial<Usuario>): Promise<Usuario> {
+  async actualizar(id: string, dto: UpdateUsuarioDto): Promise<Usuario> {
     const usuario = await this.buscarPorId(id);
 
-    
-    if (datosActualizar.rol || datosActualizar.email) {
-      throw new BadRequestException('No puedes modificar el rol o el email desde este endpoint.');
+    if (dto.password) {
+      dto.password = await this.hashPassword(dto.password);
     }
 
-    
-    const usuarioEditado = this.usuarioRepository.merge(usuario, datosActualizar);
-    return await this.usuarioRepository.save(usuarioEditado);
+    Object.assign(usuario, dto);
+    return this.usuarioRepo.save(usuario);
   }
 
-  
-  async desactivarUsuario(id: string): Promise<{ mensaje: string }> {
+  async desactivar(id: string): Promise<void> {
     const usuario = await this.buscarPorId(id);
     usuario.activo = false;
-    await this.usuarioRepository.save(usuario);
-    return { mensaje: 'Usuario desactivado correctamente.' };
+    await this.usuarioRepo.save(usuario);
+  }
+
+  // ── Lectura ───────────────────────────────────────────────────────────────
+
+  async buscarPorEmail(email: string): Promise<Usuario | null> {
+    return this.usuarioRepo.findOne({ where: { email, activo: true } });
+  }
+
+  async buscarPorId(id: string): Promise<Usuario> {
+    const usuario = await this.usuarioRepo.findOne({
+      where: { id, activo: true },
+    });
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con id ${id} no encontrado`);
+    }
+    return usuario;
+  }
+
+  async listarTodos(
+    pagina = 1,
+    limite = 10,
+    rol?: string,
+  ): Promise<{ data: Usuario[]; total: number; pagina: number; limite: number }> {
+    const query = this.usuarioRepo.createQueryBuilder('u');
+
+    if (rol) {
+      query.where('u.rol = :rol', { rol });
+    }
+
+    const [data, total] = await query
+      .skip((pagina - 1) * limite)
+      .take(limite)
+      .getManyAndCount();
+
+    return { data, total, pagina, limite };
   }
 }
