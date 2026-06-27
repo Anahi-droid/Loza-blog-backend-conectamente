@@ -25,6 +25,10 @@
     "@nestjs/core": "^11.1.27",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/mapped-types": "^2.1.1",
+<<<<<<< HEAD
+=======
+    "@nestjs/mongoose": "^11.0.4",
+>>>>>>> 1e256ced3902d0f0a5621594ea076ca03018fb94
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.27",
     "@nestjs/swagger": "^11.4.4",
@@ -32,6 +36,10 @@
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+<<<<<<< HEAD
+=======
+    "mongoose": "^9.7.3",
+>>>>>>> 1e256ced3902d0f0a5621594ea076ca03018fb94
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.22.0",

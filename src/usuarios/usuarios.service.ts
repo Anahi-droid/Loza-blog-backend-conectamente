@@ -69,7 +69,12 @@ export class UsuariosService {
   // ── Lectura ───────────────────────────────────────────────────────────────
 
   async buscarPorEmail(email: string): Promise<Usuario | null> {
-    return this.usuarioRepo.findOne({ where: { email, activo: true } });
+    return this.usuarioRepo.findOne({ 
+      where: { email, activo: true },
+      relations: {
+        perfilPsicologo: true 
+      }
+    });
   }
 
   async buscarPorId(id: string): Promise<Usuario> {

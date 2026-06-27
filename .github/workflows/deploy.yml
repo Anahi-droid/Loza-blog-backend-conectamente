@@ -27,18 +27,31 @@ jobs:
         host: ${{ secrets.VPS_HOST }}
         username: root
         key: ${{ secrets.VPS_KEY }}
+        command_timeout: "20m" # Evita que GitHub aborte antes de terminar el build
         script: |
           set -e
           cd /opt/Loza-blog-backend-conectamente
 
+          # 1. Liberar el puerto 3000 si está trabado
           sudo lsof -t -i:3000 | xargs -r sudo kill -9 || true
 
+          # 2. Inyectar variables de entorno
           printf "%s" "${{ secrets.ENV_FILE }}" > .env
 
+          # 3. Cambiar el propietario a tu usuario normal para mantener los permisos limpios
+          chown -R aloza_loza:aloza_loza /opt/Loza-blog-backend-conectamente
+
+          # 4. Instalar y compilar el proyecto TypeScript
           npm install
           npm run build
 
-          pm2 stop loza-blog-backend-conectamente || true
-          pm2 delete loza-blog-backend-conectamente || true
-          pm2 start dist/main.js --name loza-blog-backend-conectamente
+          # 5. Reinicio seguro de PM2 sin colgar la consola de GitHub
+          # Si el proceso ya existe lo reinicia, si no, lo inicia de cero usando tu alias actual
+          pm2 describe loza-blog-backend > /dev/null 2>&1
+          if [ $? -eq 0 ]; then
+            pm2 restart loza-blog-backend --update-env
+          else
+            pm2 start dist/main.js --name "loza-blog-backend"
+          fi
+
           pm2 save
