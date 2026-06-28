@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Psicologo } from '../psicologos/psicologo.entity';
 import { Cita } from '../citas/cita.entity';
+import { Paciente } from '../pacientes/paciente.entity';
 
 export type Rol = 'PACIENTE' | 'PSICOLOGO' | 'ADMIN';
 
@@ -37,6 +38,9 @@ export class Usuario {
 
   @OneToOne(() => Psicologo, (psicologo) => psicologo.usuario)
   perfilPsicologo?: Psicologo;
+
+  @OneToOne(() => Paciente, (paciente) => paciente.usuario)
+  perfilPaciente?: Paciente;
 
   @OneToMany(() => Cita, (cita) => cita.paciente)
   citas?: Cita[];
