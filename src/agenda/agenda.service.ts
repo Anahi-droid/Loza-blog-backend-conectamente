@@ -1,4 +1,3 @@
-// src/agenda/agenda.service.ts
 import { Injectable, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -66,7 +65,6 @@ export class AgendasService {
     nuevaFecha?: Date, 
     estaReservado?: boolean
   ) {
-    // Buscamos la agenda validando la propiedad de la relación nested 'psicologo'
     const agenda = await this.agendaRepository.findOne({
       where: { id: agendaId, psicologo: { id: psicologoId } }
     });
@@ -89,12 +87,25 @@ export class AgendasService {
     if (!agenda) {
       throw new NotFoundException('El bloque de agenda no existe o no tienes autorización.');
     }
-
-    // Si ya está reservada por un paciente, puedes lanzar un error para proteger la integridad
     if (agenda.estaReservado) {
       throw new BadRequestException('No se puede eliminar un horario que ya se encuentra reservado.');
     }
 
     await this.agendaRepository.remove(agenda);
+  }
+
+  async listarTodasLasAgendas(): Promise<Agenda[]> {
+    return await this.agendaRepository.find({
+      relations: { psicologo: true },
+      order: { fechaHoraInicio: 'DESC' }
+    });
+  }
+
+  async buscarPorId(id: string): Promise<Agenda | null> {
+    if (!id) return null;
+    return await this.agendaRepository.findOne({
+      where: { id },
+      relations: { psicologo: true }
+    });
   }
 }
