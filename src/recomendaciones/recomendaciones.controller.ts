@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { RecomendacionesService } from './recomendaciones.service';
 import { CreateRecomendacionDto } from './dto/create-recomendacione.dto';
+import { UpdateRecomendacionDto } from './dto/update-recomendacione.dto';
 
 @Controller('recomendaciones')
 export class RecomendacionesController {
@@ -24,5 +25,18 @@ export class RecomendacionesController {
   @Get('paciente/:id')
   findByPaciente(@Param('id', ParseUUIDPipe) id: string) {
     return this.recomendacionesService.findByPaciente(id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateRecomendacionDto: UpdateRecomendacionDto,
+  ) {
+    return this.recomendacionesService.update(id, updateRecomendacionDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.recomendacionesService.remove(id);
   }
 }
