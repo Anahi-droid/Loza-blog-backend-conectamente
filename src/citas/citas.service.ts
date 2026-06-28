@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Cita } from '../citas/cita.entity';
+import { Cita, EstadoCita } from '../citas/cita.entity';
 import { Agenda } from '../agenda/agenda.entity';
 import { Pago } from './pago.entity';
 import { SesionClinica } from './sesion-clinica.entity';
@@ -67,18 +67,85 @@ export class CitasService {
     if (rol === 'PSICOLOGO') {
       return await this.citaRepository.find({
         where: { psicologo: { usuario: { id: usuarioId } } },
-        relations: { 
-          paciente: true,
-          psicologo: { usuario: true } 
-        },
+        relations: { paciente: true, psicologo: true },
         order: { fechaHora: 'DESC' },
       });
     } else {
       return await this.citaRepository.find({
         where: { paciente: { id: usuarioId } },
-        relations: { psicologo: { usuario: true } },
+        relations: { psicologo: true },
         order: { fechaHora: 'DESC' },
       });
     }
+  }
+
+  // 🚀 GET POR ID CORREGIDO: Sin strings anidados con puntos
+  async obtenerCitaPorId(id: string, usuarioId: string, rol: string): Promise<Cita> {
+    const cita = await this.citaRepository.findOne({
+      where: { id },
+      relations: {
+        paciente: true,
+        psicologo: true, // Quitamos el "psicologo.usuario" que rompía la consulta
+      },
+    });
+
+    if (!cita) {
+      throw new NotFoundException('La cita solicitada no existe.');
+    }
+
+    // Regla de seguridad según rol: Si es paciente validamos su id directo
+    if (rol === 'PACIENTE' && cita.paciente?.id !== usuarioId) {
+      throw new ForbiddenException('No tienes permisos para visualizar esta cita.');
+    }
+
+    return cita;
+  }
+
+  // 🚀 UPDATE (PATCH)
+  async actualizarCita(
+    id: string, 
+    usuarioId: string, 
+    rol: string, 
+    estado?: EstadoCita, 
+    notasMedicas?: string
+  ): Promise<Cita> {
+    const cita = await this.obtenerCitaPorId(id, usuarioId, rol);
+
+    if (estado) cita.estado = estado;
+    if (notasMedicas) cita.notasNotasMedicas = notasMedicas;
+
+    return await this.citaRepository.save(cita);
+  }
+
+  // 🚀 DELETE
+  async eliminarCita(id: string, usuarioId: string, rol: string): Promise<void> {
+    const cita = await this.citaRepository.findOne({
+      where: { id },
+      relations: { psicologo: true, paciente: true }
+    });
+
+    if (!cita) {
+      throw new NotFoundException('La cita que deseas cancelar no existe.');
+    }
+
+    if (rol === 'PACIENTE' && cita.paciente?.id !== usuarioId) {
+      throw new ForbiddenException('No puedes cancelar una cita que no te pertenece.');
+    }
+
+    if (cita.psicologo) {
+      const agenda = await this.agendaRepository.findOne({
+        where: { 
+          fechaHoraInicio: cita.fechaHora, 
+          psicologo: { id: cita.psicologo.id } 
+        }
+      });
+
+      if (agenda) {
+        agenda.estaReservado = false; 
+        await this.agendaRepository.save(agenda);
+      }
+    }
+
+    await this.citaRepository.remove(cita);
   }
 }
