@@ -23,6 +23,8 @@ import { Especialidad } from './especialidades/especialidade.entity';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { EncuestasModule } from './encuestas/encuestas.module';
 import { EspecialidadesModule } from './especialidades/especialidades.module';
+import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometricos.module';
+import { ChatsModule } from './chats/chats.module';
 
 // 🚀 1. IMPORTAMOS LA ENTIDAD QUE FALTA
 import { DisponibilidadExcepcion } from './psicologos/disponibilidad-excepcion.entity'; 
@@ -77,6 +79,8 @@ import { DisponibilidadExcepcion } from './psicologos/disponibilidad-excepcion.e
     NotificacionesModule,
     EncuestasModule,
     EspecialidadesModule,
+    TestsPsicometricosModule,
+    ChatsModule,
     PsicologosModule,
     AgendaModule,
     CitasModule,

@@ -1,12 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsuariosService } from './usuarios.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
+<<<<<<< HEAD
+import { Usuario } from './usuario.entity'; // Ajusta la ruta a tu entidad real si varía
+=======
 import { Usuario } from './usuario.entity';
 import { Repository } from 'typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+>>>>>>> 1e256ced3902d0f0a5621594ea076ca03018fb94
 
+// ── Mocks ─────────────────────────────────────────────────────────────────
+const mockUsuarioRepository = () => ({
+  find: jest.fn(),
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+});
+
+// ── Suite ─────────────────────────────────────────────────────────────────
 describe('UsuariosService', () => {
   let service: UsuariosService;
+<<<<<<< HEAD
+  let repository: ReturnType<typeof mockUsuarioRepository>;
+=======
   let repository: Repository<Usuario>;
 
   const mockUsuarioRepository = {
@@ -15,25 +33,42 @@ describe('UsuariosService', () => {
     merge: jest.fn(),
     save: jest.fn(),
   };
+>>>>>>> 1e256ced3902d0f0a5621594ea076ca03018fb94
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsuariosService,
         {
+<<<<<<< HEAD
+          // Si usas TypeORM puro, getRepositoryToken(Usuario) genera el token "UsuarioRepository" automáticamente
+          provide: getRepositoryToken(Usuario), 
+          useFactory: mockUsuarioRepository,
+=======
           provide: getRepositoryToken(Usuario),
           useValue: mockUsuarioRepository,
+>>>>>>> 1e256ced3902d0f0a5621594ea076ca03018fb94
         },
       ],
     }).compile();
 
     service = module.get<UsuariosService>(UsuariosService);
+<<<<<<< HEAD
+    repository = module.get(getRepositoryToken(Usuario));
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+=======
     repository = module.get<Repository<Usuario>>(getRepositoryToken(Usuario));
+>>>>>>> 1e256ced3902d0f0a5621594ea076ca03018fb94
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
+<<<<<<< HEAD
+=======
 
   describe('buscarPorId', () => {
     it('debe lanzar NotFoundException si el usuario no existe', async () => {
@@ -68,4 +103,5 @@ describe('UsuariosService', () => {
       ).rejects.toThrow(BadRequestException);
     });
   });
+>>>>>>> 1e256ced3902d0f0a5621594ea076ca03018fb94
 });
