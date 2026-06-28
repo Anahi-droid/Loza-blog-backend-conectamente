@@ -39,6 +39,7 @@ import { SesionClinica } from './citas/sesion-clinica.entity';
 import { Diagnostico } from './historial/diagnostico.entity';
 import { Tratamiento } from './historial/tratamiento.entity';
 import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
+import { Paciente } from './pacientes/paciente.entity';
 
 @Module({
   imports: [
@@ -69,7 +70,8 @@ import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
           SesionClinica,
           Diagnostico,
           Tratamiento,
-          HorarioTrabajo
+          HorarioTrabajo,
+          Paciente
         ], 
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
@@ -99,6 +101,7 @@ import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
     PsicologosModule,
     AgendaModule,
     CitasModule,
+    PacientesModule,
   ],
 })
 export class AppModule {}
