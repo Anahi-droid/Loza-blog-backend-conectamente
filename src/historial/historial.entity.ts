@@ -13,34 +13,28 @@ import { Psicologo } from '../psicologos/psicologo.entity';
 @Entity('historiales')
 export class Historial {
   @PrimaryGeneratedColumn('uuid') 
-  id?: string;
+  id!: string;
 
-  @Column({ name: 'paciente_id', type: 'uuid' }) 
-  pacienteId?: string;
-
-  @Column({ name: 'psicologo_id', type: 'uuid' }) 
-  psicologoId?: string;
-
-  @Column({ type: 'timestamp' })
-  fechaSesion?: Date;
+  @Column({ type: 'timestamp', name: 'fecha_sesion' })
+  fechaSesion!: Date;
 
   @Column({ type: 'text' })
-  diagnostico?: string;
+  diagnostico!: string;
 
   @Column({ type: 'text', nullable: true })
   observaciones?: string;
 
   @ManyToOne(() => Usuario, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'paciente_id' })
-  paciente?: Usuario;
+  @JoinColumn({ name: 'paciente_id' }) 
+  paciente!: Usuario;
 
   @ManyToOne(() => Psicologo, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'psicologo_id' })
-  psicologo?: Psicologo;
+  @JoinColumn({ name: 'psicologo_id' }) 
+  psicologo!: Psicologo;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt?: Date;
+  @CreateDateColumn({ name: 'creado_en' })
+  createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt?: Date;
+  @UpdateDateColumn({ name: 'actualizado_en' })
+  updatedAt!: Date;
 }

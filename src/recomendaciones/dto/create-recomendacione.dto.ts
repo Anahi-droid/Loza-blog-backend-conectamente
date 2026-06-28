@@ -5,10 +5,6 @@ export class CreateRecomendacionDto {
   @IsNotEmpty({ message: 'El id del paciente es requerido' })
   pacienteId?: string;
 
-  @IsUUID('4', { message: 'El psicologoId debe ser un UUID válido' })
-  @IsNotEmpty({ message: 'El id del psicólogo es requerido' })
-  psicologoId?: string;
-
   @IsDateString({}, { message: 'La fecha debe ser una cadena ISO válida' })
   @IsNotEmpty({ message: 'La fecha de asignación es requerida' })
   fecha?: Date;
