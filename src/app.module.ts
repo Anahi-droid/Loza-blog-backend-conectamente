@@ -16,7 +16,8 @@ import { AgendaModule } from './agenda/agenda.module';
 import { CitasModule } from './citas/citas.module'; 
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { EncuestasModule } from './encuestas/encuestas.module';
-import { PacientesModule } from './pacientes/pacientes.module';
+import { ChatsModule } from './chats/chats.module';
+import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometricos.module';
 
 // Entidades del Core
 import { Usuario } from './usuarios/usuario.entity';
@@ -94,6 +95,8 @@ import { Paciente } from './pacientes/paciente.entity';
     RecomendacionesModule,
     NotificacionesModule,
     EncuestasModule,
+    ChatsModule,
+    TestsPsicometricosModule,
     EspecialidadesModule,
     PsicologosModule,
     AgendaModule,
