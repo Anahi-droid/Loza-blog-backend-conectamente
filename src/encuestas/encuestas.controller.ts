@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Put, Delete, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EncuestasService } from './encuestas.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
 import { CreateEncuestaDto } from './dto/create-encuesta.dto';
 import { CreateRespuestaDto } from './dto/create-respuesta.dto';
+import { UpdateEncuestaDto } from './dto/update-encuesta.dto';
 
 @ApiTags('encuestas')
 @ApiBearerAuth('jwt-auth')
@@ -24,6 +25,18 @@ export class EncuestasController {
     return this.encuestasService.findAll();
   }
 
+  @Get(':id/respuestas')
+  @ApiOperation({ summary: 'Obtener los resultados de respuestas de una encuesta específica' })
+  obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string) {
+    return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener una encuesta por ID' })
+  findOne(@Param('id') id: string) {
+    return this.encuestasService.findOne(id);
+  }
+
   @Post(':id/responder')
   @ApiOperation({ summary: 'Guardar las respuestas de un paciente para una encuesta' })
   guardarRespuesta(
@@ -34,9 +47,15 @@ export class EncuestasController {
     return this.encuestasService.guardarRespuesta(encuestaId, usuarioId, respuestas);
   }
 
-  @Get(':id/respuestas')
-  @ApiOperation({ summary: 'Obtener los resultados de respuestas de una encuesta específica' })
-  obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string) {
-    return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId);
+  @Put(':id')
+  @ApiOperation({ summary: 'Actualizar una encuesta por ID' })
+  update(@Param('id') id: string, @Body() updateDto: UpdateEncuestaDto) {
+    return this.encuestasService.update(id, updateDto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar una encuesta por ID' })
+  remove(@Param('id') id: string) {
+    return this.encuestasService.remove(id);
   }
 }

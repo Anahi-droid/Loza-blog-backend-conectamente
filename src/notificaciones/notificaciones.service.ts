@@ -32,4 +32,23 @@ export class NotificacionesService {
     }
     return notificacion;
   }
+
+  async findOne(id: string): Promise<Notificacion | null> {
+    return this.notificacionModel.findById(id).exec();
+  }
+
+  async findAll(): Promise<Notificacion[]> {
+    return this.notificacionModel.find().sort({ createdAt: -1 }).exec();
+  }
+
+  async update(id: string, dto: any): Promise<Notificacion> {
+    const notificacion = await this.notificacionModel.findByIdAndUpdate(id, dto, { new: true }).exec();
+    if (!notificacion) throw new NotFoundException(`Notificación con ID ${id} no encontrada`);
+    return notificacion;
+  }
+
+  async remove(id: string): Promise<{ deleted: boolean }> {
+    const res = await this.notificacionModel.findByIdAndDelete(id).exec();
+    return { deleted: !!res };
+  }
 }

@@ -42,4 +42,17 @@ export class TestsPsicometricosService {
       }
     ]).exec();
   }
+
+  async findOne(id: string): Promise<TestResultado | null> {
+    return this.testResultadoModel.findById(id).exec();
+  }
+
+  async update(id: string, dto: Partial<CreateTestResultadoDto>): Promise<TestResultado | null> {
+    return this.testResultadoModel.findByIdAndUpdate(id, dto, { new: true }).exec();
+  }
+
+  async remove(id: string): Promise<{ deleted: boolean }> {
+    const res = await this.testResultadoModel.findByIdAndDelete(id).exec();
+    return { deleted: !!res };
+  }
 }

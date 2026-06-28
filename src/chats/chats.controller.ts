@@ -14,7 +14,7 @@ export class ChatsController {
     return this.chatsService.enviarMensaje(req.user.id, createChatDto);
   }
 
-  @Get('/:usuarioId')
+  @Get(':usuarioId')
   async obtenerHistorial(@Req() req, @Param('usuarioId') usuarioId: string) {
     return this.chatsService.obtenerHistorial(req.user.id, usuarioId);
   }
