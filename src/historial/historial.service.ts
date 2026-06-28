@@ -12,6 +12,7 @@ export class HistorialService {
     private readonly historialRepository: Repository<Historial>,
   ) {}
 
+  // NO MODIFICADO - Se mantiene idéntico como me pediste
   async create(createHistorialDto: CreateHistorialDto): Promise<Historial> {
     const nuevoHistorial = this.historialRepository.create({
       ...createHistorialDto,
@@ -21,34 +22,40 @@ export class HistorialService {
     return await this.historialRepository.save(nuevoHistorial);
   }
 
+  // NO MODIFICADO - Se mantiene idéntico como me pediste
   async findAll(): Promise<Historial[]> {
     return await this.historialRepository.find({ 
       relations: { paciente: true, psicologo: true } 
     });
   }
 
+  // CORREGIDO: Eliminamos el Number(id) para que acepte el UUID en string plano
   async findOne(id: string): Promise<Historial> {
     const historial = await this.historialRepository.findOne({
-      where: { id: Number(id) as any },
+      where: { id: id as any }, // Ahora busca directamente el UUID como string
       relations: { paciente: true, psicologo: true },
     });
     if (!historial) throw new NotFoundException(`Historial con ID ${id} no encontrado`);
     return historial;
   }
 
+  // CORREGIDO: Agregado el casteo final "as Historial" para eliminar la línea roja en el return
   async update(id: string, updateHistorialDto: UpdateHistorialDto): Promise<Historial> {
-    const historial = await this.findOne(id);
+    const historial = await this.findOne(id); // Llama al findOne corregido de arriba
+    
     const editado = this.historialRepository.merge(historial, {
       ...updateHistorialDto,
       paciente: updateHistorialDto.pacienteId ? ({ id: String(updateHistorialDto.pacienteId) } as any) : historial.paciente,
       psicologo: updateHistorialDto.psicologoId ? ({ id: String(updateHistorialDto.psicologoId) } as any) : historial.psicologo,
     });
-    return await this.historialRepository.save(editado);
+    
+    return await this.historialRepository.save(editado) as Historial;
   }
 
-  async remove(id: string): Promise<{ deleted: boolean }> {
+  // CORREGIDO: Reutiliza el findOne corregido con UUID
+  async remove(id: string): Promise<{ deleted: boolean; id: string }> {
     const historial = await this.findOne(id);
     await this.historialRepository.remove(historial);
-    return { deleted: true };
+    return { deleted: true, id };
   }
 }

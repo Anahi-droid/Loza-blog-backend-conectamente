@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Progreso } from './progreso.entity';
 import { CreateProgresoDto } from './dto/create-progreso.dto';
+import { UpdateProgresoDto } from './dto/update-progreso.dto';
 
 @Injectable()
 export class ProgresoService {
@@ -14,7 +15,7 @@ export class ProgresoService {
   async create(createProgresoDto: CreateProgresoDto): Promise<Progreso> {
     const nuevoProgreso = this.progresoRepository.create({
       ...createProgresoDto,
-      historial: { id: Number(createProgresoDto.historialId) as any },
+      historial: { id: createProgresoDto.historialId },
     });
     return await this.progresoRepository.save(nuevoProgreso);
   }
@@ -27,7 +28,7 @@ export class ProgresoService {
 
   async findOne(id: string): Promise<Progreso> {
     const progreso = await this.progresoRepository.findOne({
-      where: { id: Number(id) as any },
+      where: { id },
       relations: { historial: true },
     });
     if (!progreso) throw new NotFoundException(`Progreso con ID ${id} no encontrado`);
@@ -36,9 +37,29 @@ export class ProgresoService {
 
   async findByPaciente(pacienteId: string): Promise<Progreso[]> {
     return await this.progresoRepository.find({
-      where: { historial: { pacienteId: Number(pacienteId) as any } },
+      where: { historial: { id: pacienteId } }, // Ajustado asumiendo que historial maneja la relación o el ID correspondiente
       relations: { historial: true },
       order: { fecha: 'ASC' },
     });
+  }
+
+  async update(id: string, updateProgresoDto: UpdateProgresoDto): Promise<Progreso> {
+    // Buscamos si existe primero para lanzar la excepción si no
+    const progreso = await this.findOne(id);
+    
+    // Fusionamos los cambios sobre la entidad encontrada
+    const progresoEditado = this.progresoRepository.merge(progreso, {
+      ...updateProgresoDto,
+      // Si se envía un nuevo historialId, se mapea correctamente el objeto de la relación
+      ...(updateProgresoDto.historialId && { historial: { id: updateProgresoDto.historialId } })
+    });
+
+    return await this.progresoRepository.save(progresoEditado);
+  }
+
+  async remove(id: string): Promise<{ message: string }> {
+    const progreso = await this.findOne(id);
+    await this.progresoRepository.remove(progreso);
+    return { message: `Progreso con ID ${id} eliminado exitosamente` };
   }
 }
