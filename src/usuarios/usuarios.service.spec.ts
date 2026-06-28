@@ -5,6 +5,17 @@ import { Usuario } from './usuario.entity';
 import { Repository } from 'typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
+// ── Mocks ─────────────────────────────────────────────────────────────────
+const mockUsuarioRepository = () => ({
+  find: jest.fn(),
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+});
+
+// ── Suite ─────────────────────────────────────────────────────────────────
 describe('UsuariosService', () => {
   let service: UsuariosService;
   let repository: Repository<Usuario>;
