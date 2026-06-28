@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cita } from '../citas/cita.entity';
 import { Agenda } from '../agenda/agenda.entity';
+import { Pago } from './pago.entity';
+import { SesionClinica } from './sesion-clinica.entity';
 
 @Injectable()
 export class CitasService {
@@ -11,6 +13,10 @@ export class CitasService {
     private citaRepository: Repository<Cita>,
     @InjectRepository(Agenda)
     private agendaRepository: Repository<Agenda>,
+    @InjectRepository(Pago)
+    private pagoRepository: Repository<Pago>,
+    @InjectRepository(SesionClinica)
+    private sesionRepository: Repository<SesionClinica>,
   ) {}
 
   async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
@@ -38,14 +44,33 @@ export class CitasService {
       estado: 'PENDIENTE',
     });
 
-    return await this.citaRepository.save(nuevaCita);
+    const citaGuardada = await this.citaRepository.save(nuevaCita);
+
+    const nuevoPago = this.pagoRepository.create({
+      monto: 35.00,
+      estado: 'PENDIENTE',
+      cita: citaGuardada
+    });
+    await this.pagoRepository.save(nuevoPago);
+
+    const nuevaSesion = this.sesionRepository.create({
+      motivoEvolucion: 'Cita agendada - Esperando sesión',
+      notasPrivadas: 'Ninguna nota ingresada por el profesional',
+      cita: citaGuardada
+    });
+    await this.sesionRepository.save(nuevaSesion);
+
+    return citaGuardada;
   }
 
   async listarMisCitas(usuarioId: string, rol: string): Promise<Cita[]> {
     if (rol === 'PSICOLOGO') {
       return await this.citaRepository.find({
         where: { psicologo: { usuario: { id: usuarioId } } },
-        relations: { paciente: true },
+        relations: { 
+          paciente: true,
+          psicologo: { usuario: true } 
+        },
         order: { fechaHora: 'DESC' },
       });
     } else {
