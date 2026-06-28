@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
 @Controller('usuarios')
 export class UsuariosController {
@@ -16,22 +17,19 @@ export class UsuariosController {
     return this.usuariosService.buscarPorId(id);
   }
 
-  // Comentamos temporalmente los métodos CRUD que no desarrollaron en su service
-  // para evitar que frene tu compilación médica.
-  /*
   @Get()
   findAll() {
-    return this.usuariosService.findAll();
+    return this.usuariosService.listarTodos();
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUsuarioDto: any) {
-    return this.usuariosService.update(id, updateUsuarioDto);
+  update(@Param('id') id: string, @Body() updateUsuarioDto: UpdateUsuarioDto) {
+    return this.usuariosService.actualizar(id, updateUsuarioDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usuariosService.remove(id);
+  async remove(@Param('id') id: string) {
+    await this.usuariosService.desactivar(id);
+    return { message: `Usuario con id ${id} desactivado correctamente.` };
   }
-  */
 }
