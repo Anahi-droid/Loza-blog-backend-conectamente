@@ -16,6 +16,8 @@ import { AgendaModule } from './agenda/agenda.module';
 import { CitasModule } from './citas/citas.module'; 
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { EncuestasModule } from './encuestas/encuestas.module';
+import { ChatsModule } from './chats/chats.module';
+import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometricos.module';
 
 // Entidades del Core
 import { Usuario } from './usuarios/usuario.entity';
@@ -37,6 +39,7 @@ import { SesionClinica } from './citas/sesion-clinica.entity';
 import { Diagnostico } from './historial/diagnostico.entity';
 import { Tratamiento } from './historial/tratamiento.entity';
 import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
+import { Paciente } from './pacientes/paciente.entity';
 
 @Module({
   imports: [
@@ -67,7 +70,8 @@ import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
           SesionClinica,
           Diagnostico,
           Tratamiento,
-          HorarioTrabajo
+          HorarioTrabajo,
+          Paciente
         ], 
         synchronize: config.get('NODE_ENV') !== 'production',
       }),
@@ -91,10 +95,13 @@ import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
     RecomendacionesModule,
     NotificacionesModule,
     EncuestasModule,
+    ChatsModule,
+    TestsPsicometricosModule,
     EspecialidadesModule,
     PsicologosModule,
     AgendaModule,
     CitasModule,
+    PacientesModule,
   ],
 })
 export class AppModule {}
