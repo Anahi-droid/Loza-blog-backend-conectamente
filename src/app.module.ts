@@ -26,6 +26,9 @@ import { Progreso } from './progreso/progreso.entity';
 import { Recomendacion } from './recomendaciones/recomendacion.entity';
 import { Agenda } from './agenda/agenda.entity';
 import { Especialidad } from './especialidades/especialidade.entity'; 
+import { EspecialidadesModule } from './especialidades/especialidades.module';
+
+// 🚀 1. IMPORTAMOS LA ENTIDAD QUE FALTA
 import { DisponibilidadExcepcion } from './psicologos/disponibilidad-excepcion.entity'; 
 
 // 🚀 IMPORTACIONES DE LAS 5 NUEVAS ENTIDADES CON SUS RUTAS CORRECTAS
@@ -88,6 +91,7 @@ import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
     RecomendacionesModule,
     NotificacionesModule,
     EncuestasModule,
+    EspecialidadesModule,
     PsicologosModule,
     AgendaModule,
     CitasModule,
