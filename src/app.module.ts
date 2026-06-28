@@ -9,14 +9,14 @@ import { AdminModule } from './admin/admin.module';
 import { HistorialModule } from './historial/historial.module';
 import { ProgresoModule } from './progreso/progreso.module';
 import { RecomendacionesModule } from './recomendaciones/recomendaciones.module';
-import { PsicologosModule } from './psicologos/psicologos.module';
-import { AgendaModule } from './agenda/agenda.module';
-import { CitasModule } from './citas/citas.module'; 
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { EncuestasModule } from './encuestas/encuestas.module';
 import { ChatsModule } from './chats/chats.module';
 import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometricos.module';
-import {PacientesModule} from './pacientes/pacientes.module';
+import { PacientesModule } from './pacientes/pacientes.module';
+import { PsicologosModule } from './psicologos/psicologos.module';
+import { AgendaModule } from './agenda/agenda.module';
+import { CitasModule } from './citas/citas.module'; 
 import { Usuario } from './usuarios/usuario.entity';
 import { Psicologo } from './psicologos/psicologo.entity';
 import { Cita } from './citas/cita.entity';
@@ -25,7 +25,6 @@ import { Progreso } from './progreso/progreso.entity';
 import { Recomendacion } from './recomendaciones/recomendacion.entity';
 import { Agenda } from './agenda/agenda.entity';
 import { Especialidad } from './especialidades/especialidade.entity'; 
-import { EspecialidadesModule } from './especialidades/especialidades.module';
 import { DisponibilidadExcepcion } from './psicologos/disponibilidad-excepcion.entity'; 
 import { Pago } from './citas/pago.entity';
 import { SesionClinica } from './citas/sesion-clinica.entity';
@@ -36,19 +35,20 @@ import { Paciente } from './pacientes/paciente.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ 
+      isGlobal: true 
+    }),
     
-    // Conexión Relacional (PostgreSQL)
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        host: config.get('DB_HOST'),
-        port: config.get<number>('DB_PORT'),
-        username: config.get('DB_USER'),
-        password: config.get('DB_PASS'), 
-        database: config.get('DB_NAME'),
+        host: config.get<string>('DB_HOST', 'localhost'),
+        port: config.get<number>('DB_PORT', 5432),
+        username: config.get<string>('DB_USER'),
+        password: config.get<string>('DB_PASS'), 
+        database: config.get<string>('DB_NAME'),
         entities: [
           Usuario, 
           Psicologo, 
@@ -66,11 +66,10 @@ import { Paciente } from './pacientes/paciente.entity';
           HorarioTrabajo,
           Paciente
         ], 
-        synchronize: config.get('NODE_ENV') !== 'production',
+        synchronize: config.get<string>('NODE_ENV') !== 'production',
       }),
     }),
     
-    // Conexión No Relacional (MongoDB)
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -90,11 +89,10 @@ import { Paciente } from './pacientes/paciente.entity';
     EncuestasModule,
     ChatsModule,
     TestsPsicometricosModule,
-    EspecialidadesModule,
+    PacientesModule,
     PsicologosModule,
     AgendaModule,
     CitasModule,
-    PacientesModule,
   ],
 })
 export class AppModule {}
