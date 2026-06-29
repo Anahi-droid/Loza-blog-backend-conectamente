@@ -85,9 +85,6 @@ export class AgendasService {
     await this.agendaRepository.remove(agenda);
   }
 
-  // ==========================================
-  // LÓGICA DE HORARIOS DE TRABAJO BASE
-  // ==========================================
 
   async listarTodosLosHorariosTrabajo(): Promise<HorarioTrabajo[]> {
     return await this.horarioRepository.find({

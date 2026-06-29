@@ -6,8 +6,8 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    UsuariosModule, // para UsuariosService
-    AuthModule,     // para JwtAuthGuard
+    UsuariosModule, 
+    AuthModule,     
   ],
   controllers: [PerfilController],
   providers: [PerfilService],
