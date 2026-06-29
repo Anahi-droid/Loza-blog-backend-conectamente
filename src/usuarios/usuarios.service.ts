@@ -20,7 +20,6 @@ export class UsuariosService {
     private readonly usuarioRepo: Repository<Usuario>,
   ) {}
 
-  // ── Utilidad interna ──────────────────────────────────────────────────────
 
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, this.SALT_ROUNDS);
@@ -30,7 +29,6 @@ export class UsuariosService {
     return bcrypt.compare(plain, hashed);
   }
 
-  // ── Escritura ─────────────────────────────────────────────────────────────
 
   async crear(dto: CreateUsuarioDto): Promise<Usuario> {
     const existe = await this.usuarioRepo.findOne({
@@ -66,7 +64,6 @@ export class UsuariosService {
     await this.usuarioRepo.save(usuario);
   }
 
-  // ── Lectura ───────────────────────────────────────────────────────────────
 
   async buscarPorEmail(email: string): Promise<Usuario | null> {
     return this.usuarioRepo.findOne({ 

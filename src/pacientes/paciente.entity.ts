@@ -18,7 +18,6 @@ export class Paciente {
   @PrimaryGeneratedColumn('uuid')
   id?: string;
 
-  // Apunta a la propiedad inversa 'perfilPaciente' en Usuario
   @OneToOne(() => Usuario, (usuario) => usuario.perfilPaciente, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuario_id' })
   usuario?: Usuario;

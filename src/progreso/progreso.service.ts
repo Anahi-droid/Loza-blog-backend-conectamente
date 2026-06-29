@@ -37,20 +37,16 @@ export class ProgresoService {
 
   async findByPaciente(pacienteId: string): Promise<Progreso[]> {
     return await this.progresoRepository.find({
-      where: { historial: { id: pacienteId } }, // Ajustado asumiendo que historial maneja la relación o el ID correspondiente
+      where: { historial: { id: pacienteId } }, 
       relations: { historial: true },
       order: { fecha: 'ASC' },
     });
   }
 
   async update(id: string, updateProgresoDto: UpdateProgresoDto): Promise<Progreso> {
-    // Buscamos si existe primero para lanzar la excepción si no
     const progreso = await this.findOne(id);
-    
-    // Fusionamos los cambios sobre la entidad encontrada
     const progresoEditado = this.progresoRepository.merge(progreso, {
       ...updateProgresoDto,
-      // Si se envía un nuevo historialId, se mapea correctamente el objeto de la relación
       ...(updateProgresoDto.historialId && { historial: { id: updateProgresoDto.historialId } })
     });
 

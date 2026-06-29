@@ -8,7 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class HistorialController {
   constructor(private readonly historialService: HistorialService) {}
 
-  @UseGuards(JwtAuthGuard) // 🔒 Protegido
+  @UseGuards(JwtAuthGuard) 
   @Post()
   create(@Req() req, @Body() createHistorialDto: CreateHistorialDto) {
     const psicologoId = req.user.psicologoId || req.user.id;

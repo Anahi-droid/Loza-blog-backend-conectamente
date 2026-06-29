@@ -34,9 +34,6 @@ export class AgendasController {
     return this.agendasService.listarTodasLasAgendas();
   }
 
-  // ==========================================
-  // 📅 SECCIÓN 1: AGENDAS BASE / DISPONIBILIDAD
-  // ==========================================
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -85,9 +82,6 @@ export class AgendasController {
     return { message: 'Bloque de disponibilidad eliminado correctamente.' };
   }
 
-  // ==========================================
-  // 🛠️ SECCIÓN 2: HORARIOS DE TRABAJO INDIVIDUALES
-  // ==========================================
 
   @Get('horarios-trabajo/:id')
   async obtenerHorarioTrabajoPorId(@Param('id') id: string) {
@@ -129,9 +123,6 @@ export class AgendasController {
     return { message: 'Horario de trabajo base removido de forma exitosa.' };
   }
 
-  // ==========================================
-  // 🚫 SECCIÓN 3: DISPONIBILIDAD EXCEPCIONES INDIVIDUALES
-  // ==========================================
 
   @Get('disponibilidad-excepciones/:id')
   async obtenerExcepcionPorId(@Param('id') id: string) {
