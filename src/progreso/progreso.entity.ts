@@ -12,30 +12,27 @@ import { Historial } from '../historial/historial.entity';
 @Entity('progresos')
 export class Progreso {
   @PrimaryGeneratedColumn('uuid') 
-  id?: string;
-
-  @Column({ name: 'historial_id', type: 'uuid' }) 
-  historialId?: string;
+  id!: string;
 
   @Column({ type: 'timestamp' })
-  fecha?: Date;
+  fecha!: Date;
 
-  @Column({ type: 'varchar', length: 255 })
-  estadoEmocional?: string;
+  @Column({ type: 'varchar', length: 255, name: 'estado_emocional' })
+  estadoEmocional!: string;
 
   @Column({ type: 'text' })
-  avance?: string;
+  avance!: string;
 
   @Column({ type: 'text', nullable: true })
   observaciones?: string;
 
   @ManyToOne(() => Historial, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'historial_id' })
-  historial?: Historial;
+  @JoinColumn({ name: 'historial_id' }) 
+  historial!: Historial;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt?: Date;
+  @CreateDateColumn({ name: 'creado_en' })
+  createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt?: Date;
+  @UpdateDateColumn({ name: 'actualizado_en' })
+  updatedAt!: Date;
 }
