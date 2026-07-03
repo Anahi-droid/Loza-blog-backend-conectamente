@@ -7,7 +7,6 @@ import { Usuario } from '../usuarios/usuario.entity'; // Importa la entidad Usua
 
 @Module({
   imports: [
-    // Asegúrate de incluir AMBAS entidades aquí
     TypeOrmModule.forFeature([Paciente, Usuario]), 
   ],
   controllers: [PacientesController],
