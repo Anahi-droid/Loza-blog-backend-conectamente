@@ -24,8 +24,9 @@ describe('RecomendacionesController (unit)', () => {
 
   it('create: delega en servicio', async () => {
     const dto = { texto: 'x', pacienteId: 'p1' };
-    const res = await controller.create(dto as any);
-    expect(mockService.create).toHaveBeenCalledWith(dto);
+    const mockReq: any = { user: { psicologoId: 'ps1' } };
+    const res = await controller.create(mockReq, dto as any);
+    expect(mockService.create).toHaveBeenCalledWith(dto, 'ps1');
     expect(res).toEqual({ id: 'r1' });
   });
 
@@ -47,4 +48,3 @@ describe('RecomendacionesController (unit)', () => {
     expect(del).toEqual({ deleted: true });
   });
 });
-

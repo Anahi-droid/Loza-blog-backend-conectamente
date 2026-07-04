@@ -60,6 +60,21 @@ describe('PsicologosService', () => {
     });
   });
 
+  describe('listarTodos', () => {
+    it('debe retornar un arreglo de psicólogos activos (Línea 32)', async () => {
+      const mockLista = [{ id: 'psico-1', numeroColegiatura: '123' }];
+      mockPsicologoRepo.find.mockResolvedValue(mockLista);
+
+      const resultado = await service.listarTodos();
+
+      expect(mockPsicologoRepo.find).toHaveBeenCalledWith({
+        relations: { usuario: true },
+        where: { usuario: { activo: true } }
+      });
+      expect(resultado).toEqual(mockLista);
+    });
+  });
+
   describe('actualizar', () => {
     it('debe lanzar NotFoundException si el perfil no existe', async () => {
       mockPsicologoRepo.findOne.mockResolvedValue(null);
@@ -82,6 +97,14 @@ describe('PsicologosService', () => {
   });
 
   describe('eliminar', () => {
+    it('debe lanzar NotFoundException si el perfil a eliminar no existe (Línea 57)', async () => {
+      mockPsicologoRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.eliminar('id-inexistente'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
     it('debe eliminar el perfil si existe', async () => {
       const perfilExistente = { id: 'psico-1' };
       mockPsicologoRepo.findOne.mockResolvedValue(perfilExistente);

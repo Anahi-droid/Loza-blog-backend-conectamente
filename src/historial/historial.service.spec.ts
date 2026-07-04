@@ -58,10 +58,51 @@ describe('HistorialService', () => {
       expect(resultado).toEqual(mockResult);
     });
 
+    it('findAll() debe listar todos los expedientes de historiales con sus relaciones (Línea 30)', async () => {
+      mockHistorialRepo.find.mockResolvedValue([]);
+      
+      const resultado = await service.findAll();
+      
+      expect(mockHistorialRepo.find).toHaveBeenCalledWith({
+        relations: { paciente: true, psicologo: true }
+      });
+      expect(resultado).toEqual([]);
+    });
+
     it('findOne() debe lanzar NotFoundException si el historial no existe', async () => {
       mockHistorialRepo.findOne.mockResolvedValue(null);
 
       await expect(service.findOne('id-falso')).rejects.toThrow(NotFoundException);
+    });
+
+    it('update() debe fusionar campos del DTO y guardar el historial modificado (Líneas 45-54)', async () => {
+      const historialExistente = { 
+        id: 'h-1', 
+        fechaSesion: new Date('2026-07-01'), 
+        diagnostico: 'Estrés', 
+        observaciones: 'Ninguna', 
+        paciente: { id: 'pac-1' } 
+      };
+      const dtoActualizacion = { 
+        diagnostico: 'Estrés Agudo', 
+        observaciones: 'Requiere seguimiento continuo',
+        pacienteId: 'pac-2'
+      };
+
+      mockHistorialRepo.findOne.mockResolvedValue(historialExistente);
+      mockHistorialRepo.merge.mockImplementation((orig, dest) => ({ ...orig, ...dest }));
+      mockHistorialRepo.save.mockImplementation(async (h) => h);
+
+      const resultado = await service.update('h-1', dtoActualizacion);
+
+      expect(mockHistorialRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'h-1' },
+        relations: { paciente: true, psicologo: true }
+      });
+      expect(mockHistorialRepo.merge).toHaveBeenCalled();
+      expect(resultado.diagnostico).toBe('Estrés Agudo');
+      expect(resultado.observaciones).toBe('Requiere seguimiento continuo');
+      expect(mockHistorialRepo.save).toHaveBeenCalled();
     });
 
     it('remove() debe eliminar el historial y retornar confirmación estructurada', async () => {
@@ -75,6 +116,7 @@ describe('HistorialService', () => {
       expect(resultado).toEqual({ deleted: true, id: 'h-1' });
     });
   });
+
   describe('Diagnósticos Clínicos - Gestión CIE-10', () => {
     it('createDiagnostico() debe asociar un diagnóstico al historial clínico existente', async () => {
       const historialMock = { id: 'h-1' };
@@ -89,6 +131,17 @@ describe('HistorialService', () => {
       expect(mockDiagnosticoRepo.create).toHaveBeenCalled();
       expect(mockDiagnosticoRepo.save).toHaveBeenCalledWith(diagnosticoMock);
       expect(resultado).toEqual(diagnosticoMock);
+    });
+
+    it('findAllDiagnosticos() debe retornar el listado completo de CIE-10 con relaciones (Línea 74)', async () => {
+      mockDiagnosticoRepo.find.mockResolvedValue([]);
+
+      const resultado = await service.findAllDiagnosticos();
+
+      expect(mockDiagnosticoRepo.find).toHaveBeenCalledWith({
+        relations: { historial: true }
+      });
+      expect(resultado).toEqual([]);
     });
 
     it('findOneDiagnostico() debe lanzar NotFoundException si el diagnóstico no existe', async () => {
