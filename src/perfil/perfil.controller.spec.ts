@@ -1,122 +1,109 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { PerfilController } from './perfil.controller';
 import { PerfilService } from './perfil.service';
-import { UsuariosService } from '../usuarios/usuarios.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
+const USUARIO_ID = '33333333-3333-3333-3333-333333333333';
 
-const mockUsuariosService = () => ({
-  buscarPorId: jest.fn(),
-  actualizar:  jest.fn(),
-});
-
-const usuarioCompleto = {
-  id:            'uuid-perfil-001',
-  email:         'carlos@clinica.com',
-  password:      'hashed_pass_oculta',
-  nombre:        'Carlos',
-  apellido:      'Méndez',
-  rol:           'PACIENTE',
-  activo:        true,
-  creadoEn:      new Date(),
-  actualizadoEn: new Date(),
-};
-
-// ── Suite ─────────────────────────────────────────────────────────────────
-
-describe('PerfilService', () => {
+describe('PerfilController', () => {
+  let controller: PerfilController;
   let service: PerfilService;
-  let usuariosService: ReturnType<typeof mockUsuariosService>;
+
+  const mockPerfilService = {
+    obtenerPerfil: jest.fn(),
+    crearPerfil: jest.fn(),
+    actualizarPerfil: jest.fn(),
+    eliminarPerfil: jest.fn(),
+  };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
+      controllers: [PerfilController],
       providers: [
-        PerfilService,
-        { provide: UsuariosService, useFactory: mockUsuariosService },
+        {
+          provide: PerfilService,
+          useValue: mockPerfilService,
+        },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
-    service         = module.get<PerfilService>(PerfilService);
-    usuariosService = module.get(UsuariosService);
+    controller = module.get<PerfilController>(PerfilController);
+    service = module.get<PerfilService>(PerfilService);
   });
 
-  // ── obtenerPerfil ─────────────────────────────────────────────────────────
+  it('debería estar definido el controlador de perfil', () => {
+    expect(controller).toBeDefined();
+  });
 
-  describe('obtenerPerfil', () => {
-    it('debe retornar el perfil sin el campo password', async () => {
-      usuariosService.buscarPorId.mockResolvedValue(usuarioCompleto);
+  describe('obtenerPerfil (Mismo Usuario Autenticado)', () => {
+    it('debería extraer el id del objeto req.user e invocar al servicio', async () => {
+      const mockRequest: any = { user: { id: USUARIO_ID, email: 'test@test.com', rol: 'PACIENTE' } };
+      const mockResponse = { id: USUARIO_ID, nombre: 'Juan' };
 
-      const resultado = await service.obtenerPerfil('uuid-perfil-001');
+      mockPerfilService.obtenerPerfil.mockResolvedValue(mockResponse);
 
-      expect(resultado).not.toHaveProperty('password');
-      expect(resultado).toHaveProperty('email', 'carlos@clinica.com');
-      expect(resultado).toHaveProperty('nombre', 'Carlos');
-      expect(resultado).toHaveProperty('rol', 'PACIENTE');
-    });
+      const result = await controller.obtenerPerfil(mockRequest);
 
-    it('debe consultar por el ID correcto proveniente del JWT', async () => {
-      usuariosService.buscarPorId.mockResolvedValue(usuarioCompleto);
-
-      await service.obtenerPerfil('uuid-perfil-001');
-
-      expect(usuariosService.buscarPorId).toHaveBeenCalledWith('uuid-perfil-001');
-      expect(usuariosService.buscarPorId).toHaveBeenCalledTimes(1);
-    });
-
-    it('debe propagar NotFoundException si el usuario no existe', async () => {
-      usuariosService.buscarPorId.mockRejectedValue(
-        new NotFoundException('Usuario no encontrado'),
-      );
-
-      await expect(service.obtenerPerfil('id-fantasma')).rejects.toThrow(NotFoundException);
+      expect(result).toEqual(mockResponse);
+      expect(service.obtenerPerfil).toHaveBeenCalledWith(USUARIO_ID);
     });
   });
 
-  // ── actualizarPerfil ──────────────────────────────────────────────────────
+  describe('obtenerPorId', () => {
+    it('debería invocar a obtenerPerfil enviando el id recibido por parámetro', async () => {
+      const mockResponse = { id: USUARIO_ID, nombre: 'Juan' };
+      mockPerfilService.obtenerPerfil.mockResolvedValue(mockResponse);
+
+      const result = await controller.obtenerPorId(USUARIO_ID);
+
+      expect(result).toEqual(mockResponse);
+      expect(service.obtenerPerfil).toHaveBeenCalledWith(USUARIO_ID);
+    });
+  });
+
+  describe('crearPerfil', () => {
+    it('debería invocar a service.crearPerfil mandando el DTO', async () => {
+      const dto = { nombre: 'Lucas', apellido: 'Díaz', email: 'lucas@test.com', password: 'securePassword' };
+      const mockResponse = { id: USUARIO_ID, nombre: 'Lucas' };
+
+      mockPerfilService.crearPerfil.mockResolvedValue(mockResponse);
+
+      const result = await controller.crearPerfil(dto);
+
+      expect(result).toEqual(mockResponse);
+      expect(service.crearPerfil).toHaveBeenCalledWith(dto);
+    });
+  });
 
   describe('actualizarPerfil', () => {
-    const dto = { nombre: 'Carlos Alberto', apellido: 'Méndez Torres' };
+    it('debería actualizar el perfil ocupando el id de la sesión req.user', async () => {
+      const mockRequest: any = { user: { id: USUARIO_ID } };
+      const dto = { nombre: 'Lucas Editado' };
+      const mockResponse = { id: USUARIO_ID, nombre: 'Lucas Editado' };
 
-    it('debe actualizar usando el ID del JWT, no uno externo', async () => {
-      const actualizado = { ...usuarioCompleto, ...dto };
-      usuariosService.actualizar.mockResolvedValue(actualizado);
+      mockPerfilService.actualizarPerfil.mockResolvedValue(mockResponse);
 
-      await service.actualizarPerfil('uuid-perfil-001', dto);
+      const result = await controller.actualizarPerfil(mockRequest, dto);
 
-      expect(usuariosService.actualizar).toHaveBeenCalledWith('uuid-perfil-001', dto);
+      expect(result).toEqual(mockResponse);
+      expect(service.actualizarPerfil).toHaveBeenCalledWith(USUARIO_ID, dto);
     });
+  });
 
-    it('debe retornar el perfil actualizado sin password', async () => {
-      const actualizado = { ...usuarioCompleto, ...dto };
-      usuariosService.actualizar.mockResolvedValue(actualizado);
+  describe('eliminarPerfil', () => {
+    it('debería llamar al borrado/desactivación usando el id de req.user', async () => {
+      const mockRequest: any = { user: { id: USUARIO_ID } };
+      mockPerfilService.eliminarPerfil.mockResolvedValue(undefined);
 
-      const resultado = await service.actualizarPerfil('uuid-perfil-001', dto);
+      await controller.eliminarPerfil(mockRequest);
 
-      expect(resultado).not.toHaveProperty('password');
-      expect(resultado.nombre).toBe('Carlos Alberto');
-    });
-
-    it('debe permitir actualizar solo la contraseña', async () => {
-      const dtoPassword = { password: 'NuevaClave789' };
-      const actualizado = { ...usuarioCompleto };
-      usuariosService.actualizar.mockResolvedValue(actualizado);
-
-      await service.actualizarPerfil('uuid-perfil-001', dtoPassword);
-
-      expect(usuariosService.actualizar).toHaveBeenCalledWith(
-        'uuid-perfil-001',
-        dtoPassword,
-      );
-    });
-
-    it('debe propagar NotFoundException si el usuario no existe', async () => {
-      usuariosService.actualizar.mockRejectedValue(
-        new NotFoundException('Usuario no encontrado'),
-      );
-
-      await expect(
-        service.actualizarPerfil('id-fantasma', dto),
-      ).rejects.toThrow(NotFoundException);
+      expect(service.eliminarPerfil).toHaveBeenCalledWith(USUARIO_ID);
+      expect(service.eliminarPerfil).toHaveBeenCalledTimes(1);
     });
   });
 });
