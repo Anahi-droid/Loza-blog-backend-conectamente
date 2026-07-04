@@ -11,21 +11,21 @@ import { Psicologo } from './psicologo.entity';
 @Entity('disponibilidad_excepciones')
 export class DisponibilidadExcepcion {
   @PrimaryGeneratedColumn('uuid')
-  id?: string;
+  id!: string;
 
-  @Column({ type: 'timestamp' })
-  fechaInicio?: Date;
+  @Column({ type: 'timestamp', name: 'fecha_inicio' })
+  fechaInicio!: Date;
 
-  @Column({ type: 'timestamp' })
-  fechaFin?: Date;
+  @Column({ type: 'timestamp', name: 'fecha_fin' })
+  fechaFin!: Date;
 
   @Column({ type: 'varchar', length: 255 })
-  motivo?: string;
+  motivo!: string;
 
   @ManyToOne(() => Psicologo, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'psicologo_id' })
-  psicologo?: Psicologo;
+  @JoinColumn({ name: 'psicologo_id' }) 
+  psicologo!: Psicologo;
 
-  @CreateDateColumn()
-  creadoEn?: Date;
+  @CreateDateColumn({ name: 'creado_en' })
+  creadoEn!: Date;
 }

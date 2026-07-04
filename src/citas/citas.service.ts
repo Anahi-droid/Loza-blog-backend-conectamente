@@ -79,7 +79,6 @@ export class CitasService {
     }
   }
 
-  // 🚀 GET POR ID CORREGIDO: Sin strings anidados con puntos
   async obtenerCitaPorId(id: string, usuarioId: string, rol: string): Promise<Cita> {
     const cita = await this.citaRepository.findOne({
       where: { id },
@@ -101,7 +100,6 @@ export class CitasService {
     return cita;
   }
 
-  // 🚀 UPDATE (PATCH)
   async actualizarCita(
     id: string, 
     usuarioId: string, 
@@ -117,7 +115,6 @@ export class CitasService {
     return await this.citaRepository.save(cita);
   }
 
-  // 🚀 DELETE
   async eliminarCita(id: string, usuarioId: string, rol: string): Promise<void> {
     const cita = await this.citaRepository.findOne({
       where: { id },

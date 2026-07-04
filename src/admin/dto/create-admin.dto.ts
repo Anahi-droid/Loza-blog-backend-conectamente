@@ -1,7 +1,6 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { Rol } from '../../usuarios/usuario.entity';
 
-// El admin puede crear PSICOLOGO u otro ADMIN — no PACIENTE (ese se registra solo)
 export class CreateStaffDto {
   @IsEmail({}, { message: 'Email inválido' })
   email?: string;

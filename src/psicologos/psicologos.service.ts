@@ -34,4 +34,29 @@ export class PsicologosService {
       where: { usuario: { activo: true } }
     });
   }
+
+  async actualizar(usuarioId: string, camposActualizar: Partial<Psicologo>): Promise<Psicologo> {
+    const psicologo = await this.psicologoRepository.findOne({ 
+      where: { usuario: { id: usuarioId } } 
+    });
+
+    if (!psicologo) {
+      throw new NotFoundException(`Perfil de psicólogo para el usuario con ID ${usuarioId} no encontrado.`);
+    }
+
+    Object.assign(psicologo, camposActualizar);
+    return await this.psicologoRepository.save(psicologo);
+  }
+
+  async eliminar(usuarioId: string): Promise<void> {
+    const psicologo = await this.psicologoRepository.findOne({ 
+      where: { usuario: { id: usuarioId } } 
+    });
+
+    if (!psicologo) {
+      throw new NotFoundException(`Perfil de psicólogo para el usuario con ID ${usuarioId} no encontrado.`);
+    }
+    
+    await this.psicologoRepository.remove(psicologo);
+  }
 }

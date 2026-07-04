@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // ── Validación global ────────────────────────────────────────────────────
+  
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -15,7 +15,7 @@ async function bootstrap() {
     }),
   );
 
-  // ── Swagger ──────────────────────────────────────────────────────────────
+  
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Clínica Psicológica — API')
     .setDescription(
@@ -38,16 +38,16 @@ async function bootstrap() {
         description: 'Ingresa tu JWT: Bearer <token>',
         in: 'header',
       },
-      'jwt-auth', // ← nombre del esquema; lo referencian los decoradores
+      'jwt-auth', 
     )
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
 
-  // Mapea la ruta exacta a 'api/docs'
+  
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
-      persistAuthorization: true,   // el token no desaparece al refrescar
+      persistAuthorization: true,   
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },

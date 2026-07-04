@@ -9,7 +9,7 @@ export class Respuesta {
   encuestaId?: Types.ObjectId;
 
   @Prop({ required: true })
-  usuarioId?: string; // UUID de tu Postgres
+  usuarioId?: string; 
 
   @Prop({ type: Object, required: true })
   respuestas?: Record<string, any>;

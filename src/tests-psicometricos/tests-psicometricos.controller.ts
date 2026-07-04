@@ -35,7 +35,6 @@ export class TestsPsicometricosController {
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un resultado específico' })
   async findOne(@Req() req, @Param('id') id: string) {
-    // ADMINs puede ver cualquier resultado; los pacientes solo sus propios resultados
     const resultado = await this.testsService.findOne(id);
     if (!resultado) return null;
     if (req.user.rol !== 'ADMIN' && resultado.pacienteId !== req.user.id) {

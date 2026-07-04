@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Historial } from './historial.entity';
+import { Diagnostico } from './diagnostico.entity';
 import { CreateHistorialDto } from './dto/create-historial.dto';
 import { UpdateHistorialDto } from './dto/update-historial.dto';
 
@@ -10,52 +11,90 @@ export class HistorialService {
   constructor(
     @InjectRepository(Historial)
     private readonly historialRepository: Repository<Historial>,
+    @InjectRepository(Diagnostico)
+    private readonly diagnosticoRepository: Repository<Diagnostico>,
   ) {}
 
-  // NO MODIFICADO - Se mantiene idéntico como me pediste
-  async create(createHistorialDto: CreateHistorialDto): Promise<Historial> {
+  async create(createHistorialDto: CreateHistorialDto, psicologoId: string): Promise<Historial> {
     const nuevoHistorial = this.historialRepository.create({
-      ...createHistorialDto,
-      paciente: { id: createHistorialDto.pacienteId ? String(createHistorialDto.pacienteId) : undefined } as any,
-      psicologo: { id: createHistorialDto.psicologoId ? String(createHistorialDto.psicologoId) : undefined } as any,
+      fechaSesion: createHistorialDto.fechaSesion,
+      diagnostico: createHistorialDto.diagnostico,
+      observaciones: createHistorialDto.observaciones,
+      paciente: createHistorialDto.pacienteId ? { id: createHistorialDto.pacienteId } : undefined,
+      psicologo: { id: psicologoId }, 
     });
     return await this.historialRepository.save(nuevoHistorial);
   }
 
-  // NO MODIFICADO - Se mantiene idéntico como me pediste
   async findAll(): Promise<Historial[]> {
     return await this.historialRepository.find({ 
       relations: { paciente: true, psicologo: true } 
     });
   }
 
-  // CORREGIDO: Eliminamos el Number(id) para que acepte el UUID en string plano
   async findOne(id: string): Promise<Historial> {
     const historial = await this.historialRepository.findOne({
-      where: { id: id as any }, // Ahora busca directamente el UUID como string
+      where: { id }, 
       relations: { paciente: true, psicologo: true },
     });
     if (!historial) throw new NotFoundException(`Historial con ID ${id} no encontrado`);
     return historial;
   }
 
-  // CORREGIDO: Agregado el casteo final "as Historial" para eliminar la línea roja en el return
   async update(id: string, updateHistorialDto: UpdateHistorialDto): Promise<Historial> {
-    const historial = await this.findOne(id); // Llama al findOne corregido de arriba
+    const historial = await this.findOne(id);
     
     const editado = this.historialRepository.merge(historial, {
-      ...updateHistorialDto,
-      paciente: updateHistorialDto.pacienteId ? ({ id: String(updateHistorialDto.pacienteId) } as any) : historial.paciente,
-      psicologo: updateHistorialDto.psicologoId ? ({ id: String(updateHistorialDto.psicologoId) } as any) : historial.psicologo,
+      fechaSesion: updateHistorialDto.fechaSesion ?? historial.fechaSesion,
+      diagnostico: updateHistorialDto.diagnostico ?? historial.diagnostico,
+      observaciones: updateHistorialDto.observaciones ?? historial.observaciones,
+      paciente: updateHistorialDto.pacienteId ? { id: updateHistorialDto.pacienteId } : historial.paciente,
     });
     
-    return await this.historialRepository.save(editado) as Historial;
+    return await this.historialRepository.save(editado);
   }
 
-  // CORREGIDO: Reutiliza el findOne corregido con UUID
   async remove(id: string): Promise<{ deleted: boolean; id: string }> {
     const historial = await this.findOne(id);
     await this.historialRepository.remove(historial);
+    return { deleted: true, id };
+  }
+
+  async createDiagnostico(historialId: string, codigoCIE10: string, descripcion: string): Promise<Diagnostico> {
+    const historial = await this.findOne(historialId);
+    const nuevoDiagnostico = this.diagnosticoRepository.create({
+      codigoCIE10,
+      descripcion,
+      historial: historial
+    });
+    return await this.diagnosticoRepository.save(nuevoDiagnostico);
+  }
+
+  async findAllDiagnosticos(): Promise<Diagnostico[]> {
+    return await this.diagnosticoRepository.find({
+      relations: { historial: true }
+    });
+  }
+
+  async findOneDiagnostico(id: string): Promise<Diagnostico> {
+    const diagnostico = await this.diagnosticoRepository.findOne({
+      where: { id },
+      relations: { historial: true }
+    });
+    if (!diagnostico) throw new NotFoundException(`Diagnóstico clínico con ID ${id} no existe.`);
+    return diagnostico;
+  }
+
+  async updateDiagnostico(id: string, codigoCIE10?: string, descripcion?: string): Promise<Diagnostico> {
+    const diagnostico = await this.findOneDiagnostico(id);
+    if (codigoCIE10 !== undefined) diagnostico.codigoCIE10 = codigoCIE10;
+    if (descripcion !== undefined) diagnostico.descripcion = descripcion;
+    return await this.diagnosticoRepository.save(diagnostico);
+  }
+
+  async removeDiagnostico(id: string): Promise<{ deleted: boolean; id: string }> {
+    const diagnostico = await this.findOneDiagnostico(id);
+    await this.diagnosticoRepository.remove(diagnostico);
     return { deleted: true, id };
   }
 }

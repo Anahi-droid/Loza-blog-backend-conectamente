@@ -13,34 +13,28 @@ import { Psicologo } from '../psicologos/psicologo.entity';
 @Entity('recomendaciones')
 export class Recomendacion {
   @PrimaryGeneratedColumn('uuid') 
-  id?: string;
-
-  @Column({ name: 'paciente_id', type: 'uuid' }) 
-  pacienteId?: string;
-
-  @Column({ name: 'psicologo_id', type: 'uuid' }) 
-  psicologoId?: string;
+  id!: string;
 
   @Column({ type: 'timestamp' })
-  fecha?: Date;
+  fecha!: Date;
 
   @Column({ type: 'varchar', length: 255 })
-  titulo?: string;
+  titulo!: string;
 
   @Column({ type: 'text' })
-  descripcion?: string;
+  descripcion!: string;
 
-  @ManyToOne(() => Usuario, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'paciente_id' })
-  paciente?: Usuario;
+  @ManyToOne(() => Usuario, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'paciente_id' }) 
+  paciente!: Usuario;
 
-  @ManyToOne(() => Psicologo, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Psicologo, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'psicologo_id' })
   psicologo?: Psicologo;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt?: Date;
+  @CreateDateColumn({ name: 'creado_en' })
+  createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt?: Date;
+  @UpdateDateColumn({ name: 'actualizado_en' })
+  updatedAt!: Date;
 }

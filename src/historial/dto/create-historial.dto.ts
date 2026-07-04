@@ -5,10 +5,6 @@ export class CreateHistorialDto {
   @IsNotEmpty({ message: 'El id del paciente es requerido' })
   pacienteId?: string;
 
-  @IsUUID('4', { message: 'El psicologoId debe ser un UUID válido' })
-  @IsNotEmpty({ message: 'El id del psicólogo es requerido' })
-  psicologoId?: string;
-
   @IsDateString({}, { message: 'La fecha de la sesión debe ser una cadena ISO válida' })
   @IsNotEmpty({ message: 'La fecha de sesión es requerida' })
   fechaSesion?: Date;

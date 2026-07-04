@@ -4,18 +4,18 @@ import { Historial } from './historial.entity';
 @Entity('diagnosticos')
 export class Diagnostico {
   @PrimaryGeneratedColumn('uuid')
-  id?: string;
+  id!: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  codigoCIE10?: string;
+  @Column({ type: 'varchar', length: 50, name: 'codigo_cie10' })
+  codigoCIE10!: string;
 
   @Column({ type: 'text' })
-  descripcion?: string;
+  descripcion!: string;
 
   @ManyToOne(() => Historial, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'historial_id' })
-  historial?: Historial;
+  @JoinColumn({ name: 'historial_id' }) 
+  historial!: Historial;
 
-  @CreateDateColumn()
-  fechaDiagnostico?: Date;
+  @CreateDateColumn({ name: 'fecha_diagnostico' })
+  fechaDiagnostico!: Date;
 }
