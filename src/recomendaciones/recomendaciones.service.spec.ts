@@ -38,5 +38,34 @@ describe('RecomendacionesService (unit)', () => {
     repoMock.findOne.mockResolvedValue(null);
     await expect(service.findOne('no-existe')).rejects.toThrow();
   });
+
+  it('update: delega en repository.save y retorna la recomendación actualizada', async () => {
+    const dto = { texto: 'Be updated' };
+    repoMock.findOne.mockResolvedValue(recomendacion);
+    repoMock.save.mockResolvedValue({ ...recomendacion, texto: 'Be updated' });
+
+    const res = await service.update('r1', dto as any);
+
+    expect(repoMock.findOne).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      relations: { paciente: true, psicologo: true },
+    });
+    expect(repoMock.save).toHaveBeenCalled();
+    expect(res.texto).toBe('Be updated');
+  });
+
+  it('remove: delega en repository.remove y retorna deleted true', async () => {
+    repoMock.findOne.mockResolvedValue(recomendacion);
+    repoMock.remove.mockResolvedValue(undefined);
+
+    const res = await service.remove('r1');
+
+    expect(repoMock.findOne).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      relations: { paciente: true, psicologo: true },
+    });
+    expect(repoMock.remove).toHaveBeenCalledWith(recomendacion);
+    expect(res).toEqual({ deleted: true, id: 'r1' });
+  });
 });
 
