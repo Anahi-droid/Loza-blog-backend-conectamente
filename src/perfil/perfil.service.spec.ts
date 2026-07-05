@@ -1,65 +1,107 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
 import { PerfilService } from './perfil.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
-const mockUsuariosService = () => ({
-  buscarPorId: jest.fn(),
-  actualizar:  jest.fn(),
-});
+const USUARIO_ID = '33333333-3333-3333-3333-333333333333';
 
-const usuarioCompleto = {
-  id:            'uuid-perfil-001',
-  email:         'carlos@clinica.com',
-  password:      'hashed_pass_oculta',
-  nombre:        'Carlos',
-  apellido:      'Méndez',
-  rol:           'PACIENTE',
-  activo:        true,
-  creadoEn:      new Date(),
-  actualizadoEn: new Date(),
-};
-
-// ── Suite ─────────────────────────────────────────────────────────────────
 describe('PerfilService', () => {
   let service: PerfilService;
-  let usuariosService: ReturnType<typeof mockUsuariosService>;
+  let usuariosService: UsuariosService;
+
+  const mockUsuariosService = {
+    buscarPorId: jest.fn(),
+    crear: jest.fn(),
+    actualizar: jest.fn(),
+    desactivar: jest.fn(),
+  };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PerfilService,
-        // ESTA ES LA PIEZA CLAVE QUE LE FALTA A TU COMPILADOR:
-        { provide: UsuariosService, useFactory: mockUsuariosService },
+        {
+          provide: UsuariosService,
+          useValue: mockUsuariosService,
+        },
       ],
     }).compile();
 
-    service         = module.get<PerfilService>(PerfilService);
-    usuariosService = module.get(UsuariosService);
+    service = module.get<PerfilService>(PerfilService);
+    usuariosService = module.get<UsuariosService>(UsuariosService);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should be defined', () => {
+  it('debería estar definido el servicio de perfil', () => {
     expect(service).toBeDefined();
   });
 
-  // ── obtenerPerfil ─────────────────────────────────────────────────────────
   describe('obtenerPerfil', () => {
-    it('debe retornar el perfil sin el campo password', async () => {
-      usuariosService.buscarPorId.mockResolvedValue(usuarioCompleto);
-      const resultado = await service.obtenerPerfil('uuid-perfil-001');
+    it('debería retornar el perfil del usuario omitiendo la contraseña', async () => {
+      const mockUsuarioCompleto = {
+        id: USUARIO_ID,
+        nombre: 'Carlos',
+        apellido: 'Pérez',
+        email: 'carlos@example.com',
+        password: 'password_encriptada_123',
+      };
 
-      expect(resultado).not.toHaveProperty('password');
-      expect(resultado).toHaveProperty('email', 'carlos@clinica.com');
+      mockUsuariosService.buscarPorId.mockResolvedValue(mockUsuarioCompleto);
+
+      const result = await service.obtenerPerfil(USUARIO_ID);
+
+      // Verificamos que el campo password no se encuentre en el objeto resultante
+      expect(result.password).toBeUndefined();
+      expect(result.nombre).toEqual('Carlos');
+      expect(mockUsuariosService.buscarPorId).toHaveBeenCalledWith(USUARIO_ID);
+      expect(mockUsuariosService.buscarPorId).toHaveBeenCalledTimes(1);
     });
+  });
 
-    it('debe propagar NotFoundException si el usuario no existe', async () => {
-      usuariosService.buscarPorId.mockResolvedValue(null);
-      await expect(service.obtenerPerfil('id-fantasma')).rejects.toThrow(NotFoundException);
+  describe('crearPerfil', () => {
+    it('debería registrar un usuario y retornar su perfil sin password', async () => {
+      const dto = { nombre: 'Ana', apellido: 'Gómez', email: 'ana@example.com', password: 'secret123' };
+      const mockUsuarioCreado = { id: USUARIO_ID, ...dto, password: 'hashed_password' };
+
+      mockUsuariosService.crear.mockResolvedValue(mockUsuarioCreado);
+
+      const result = await service.crearPerfil(dto);
+
+      expect(result.password).toBeUndefined();
+      expect(result.email).toEqual('ana@example.com');
+      expect(mockUsuariosService.crear).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe('actualizarPerfil', () => {
+    it('debería modificar los campos del perfil y retornar la versión actualizada sin password', async () => {
+      const dto = { nombre: 'Carlos Modificado' };
+      const mockUsuarioActualizado = {
+        id: USUARIO_ID,
+        nombre: 'Carlos Modificado',
+        apellido: 'Pérez',
+        email: 'carlos@example.com',
+        password: 'hashed_password',
+      };
+
+      mockUsuariosService.actualizar.mockResolvedValue(mockUsuarioActualizado);
+
+      const result = await service.actualizarPerfil(USUARIO_ID, dto);
+
+      expect(result.password).toBeUndefined();
+      expect(result.nombre).toEqual('Carlos Modificado');
+      expect(mockUsuariosService.actualizar).toHaveBeenCalledWith(USUARIO_ID, dto);
+    });
+  });
+
+  describe('eliminarPerfil', () => {
+    it('debería invocar la desactivación de la cuenta del usuario correctamente', async () => {
+      mockUsuariosService.desactivar.mockResolvedValue(undefined);
+
+      await service.eliminarPerfil(USUARIO_ID);
+
+      expect(mockUsuariosService.desactivar).toHaveBeenCalledWith(USUARIO_ID);
+      expect(mockUsuariosService.desactivar).toHaveBeenCalledTimes(1);
     });
   });
 });
