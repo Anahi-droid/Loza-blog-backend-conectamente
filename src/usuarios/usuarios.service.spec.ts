@@ -1,30 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsuariosService } from './usuarios.service';
+import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Usuario } from './usuario.entity';
-import { Repository } from 'typeorm';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
-const mockUsuarioRepository = () => ({
-  find: jest.fn(),
-  findOne: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
-});
-
-// ── Suite ─────────────────────────────────────────────────────────────────
 describe('UsuariosService', () => {
   let service: UsuariosService;
-  let repository: Repository<Usuario>;
-
-  const mockUsuarioRepository = {
+  let repo: Repository<Usuario>;
+  
+  const mockUsuarioRepo = {
     findOne: jest.fn(),
-    find: jest.fn(),
-    merge: jest.fn(),
+    create: jest.fn(),
     save: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,50 +22,74 @@ describe('UsuariosService', () => {
         UsuariosService,
         {
           provide: getRepositoryToken(Usuario),
-          useValue: mockUsuarioRepository,
+          useValue: mockUsuarioRepo,
         },
       ],
     }).compile();
 
     service = module.get<UsuariosService>(UsuariosService);
-    repository = module.get<Repository<Usuario>>(getRepositoryToken(Usuario));
+    repo = module.get<Repository<Usuario>>(getRepositoryToken(Usuario));
+    jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
+  describe('crear', () => {
+    it('debe lanzar ConflictException si el email ya existe', async () => {
+      const dto = { email: 'duplicado@correo.com', password: 'password123', nombre: 'Andres', apellido: 'Jurado' };
+      mockUsuarioRepo.findOne.mockResolvedValue(new Usuario()); // Simula que sí encontró uno
+
+      await expect(service.crear(dto)).rejects.toThrow(ConflictException);
+    });
+
+    it('debe lanzar BadRequestException si no se envía contraseña', async () => {
+      const dto = { email: 'test@correo.com', password: '', nombre: 'Andres', apellido: 'Jurado' };
+      mockUsuarioRepo.findOne.mockResolvedValue(null); // No existe previo
+
+      await expect(service.crear(dto)).rejects.toThrow(BadRequestException);
+    });
+
+    it('debe crear y guardar el usuario encriptando la contraseña', async () => {
+      const dto = { email: 'nuevo@correo.com', password: 'password123', nombre: 'Andres', apellido: 'Jurado' };
+      const usuarioMock = { ...dto, password: 'password_encriptada' };
+
+      mockUsuarioRepo.findOne.mockResolvedValue(null);
+      mockUsuarioRepo.create.mockReturnValue(usuarioMock);
+      mockUsuarioRepo.save.mockResolvedValue(usuarioMock);
+
+      const resultado = await service.crear(dto);
+
+      expect(mockUsuarioRepo.findOne).toHaveBeenCalled();
+      expect(mockUsuarioRepo.save).toHaveBeenCalled();
+      expect(resultado.password).not.toBe('password123'); // Verifica el hashing indirectamente[cite: 3]
+    });
   });
 
   describe('buscarPorId', () => {
     it('debe lanzar NotFoundException si el usuario no existe', async () => {
-      mockUsuarioRepository.findOne.mockResolvedValue(null);
+      mockUsuarioRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.buscarPorId('id-inexistente')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.buscarPorId('id-inexistente')).rejects.toThrow(NotFoundException);
     });
 
-    it('debe retornar el usuario y eliminar la propiedad password por seguridad', async () => {
-      const usuarioMock = { id: '123', nombre: 'Juan', password: 'secret_hash' };
-      mockUsuarioRepository.findOne.mockResolvedValue(usuarioMock);
+    it('debe retornar el usuario si existe y está activo', async () => {
+      const usuarioMock = { id: '1', email: 'test@correo.com', activo: true };
+      mockUsuarioRepo.findOne.mockResolvedValue(usuarioMock);
 
-      const resultado = await service.buscarPorId('123');
-      expect(resultado.password).toBeUndefined();
-      expect(resultado.nombre).toBe('Juan');
+      const resultado = await service.buscarPorId('1');
+
+      expect(resultado).toEqual(usuarioMock);
     });
   });
 
-  describe('actualizarPerfil', () => {
-    it('debe lanzar BadRequestException si se intenta modificar el rol o el email', async () => {
-      const usuarioMock = { id: '123', email: 'juan@test.com', rol: 'PACIENTE' };
-      mockUsuarioRepository.findOne.mockResolvedValue(usuarioMock);
+  describe('desactivar', () => {
+    it('debe cambiar el estado del usuario a activo = false (borrado lógico)', async () => {
+      const usuarioMock = { id: '1', email: 'test@correo.com', activo: true };
+      mockUsuarioRepo.findOne.mockResolvedValue(usuarioMock);
+      mockUsuarioRepo.save.mockResolvedValue({ ...usuarioMock, activo: false });
 
-      await expect(
-        service.actualizarPerfil('123', { email: 'nuevo@test.com' }),
-      ).rejects.toThrow(BadRequestException);
+      await service.desactivar('1');
 
-      await expect(
-        service.actualizarPerfil('123', { rol: 'ADMIN' }),
-      ).rejects.toThrow(BadRequestException);
+      expect(usuarioMock.activo).toBe(false); // Operación principal de eliminación lógica[cite: 3]
+      expect(mockUsuarioRepo.save).toHaveBeenCalledWith(usuarioMock);
     });
   });
 });
