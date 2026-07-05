@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PsicologosController } from './psicologos.controller';
 import { PsicologosService } from './psicologos.service';
+import { Psicologo } from './psicologo.entity';
 
 describe('PsicologosController', () => {
   let controller: PsicologosController;
@@ -24,9 +25,13 @@ describe('PsicologosController', () => {
     jest.clearAllMocks();
   });
 
+  it('debe estar definido e inicializar sus dependencias (Ramas Constructor)', () => {
+    expect(controller).toBeDefined();
+  });
+
   describe('listarTodos', () => {
     it('debe invocar a psicologosService.listarTodos y retornar la lista de psicólogos', async () => {
-      const listaMock = [{ id: 'psico-1', numeroColegiatura: '123' }];
+      const listaMock = [{ id: 'psico-1', numeroColegiatura: '123' }] as Psicologo[];
       mockPsicologosService.listarTodos.mockResolvedValue(listaMock);
 
       const resultado = await controller.listarTodos();
@@ -38,8 +43,8 @@ describe('PsicologosController', () => {
 
   describe('crearPerfil', () => {
     it('debe invocar a psicologosService.crearPerfil y retornar el perfil creado', async () => {
-      const datosProf = { numeroColegiatura: '123' };
-      const resultadoMock = { id: 'psico-1', ...datosProf };
+      const datosProf: Partial<Psicologo> = { numeroColegiatura: '123' };
+      const resultadoMock = { id: 'psico-1', ...datosProf } as Psicologo;
       mockPsicologosService.crearPerfil.mockResolvedValue(resultadoMock);
 
       const resultado = await controller.crearPerfil('user-123', datosProf);
@@ -51,8 +56,8 @@ describe('PsicologosController', () => {
 
   describe('actualizar', () => {
     it('debe invocar a psicologosService.actualizar y retornar el perfil modificado', async () => {
-      const camposActualizar = { numeroColegiatura: '999' };
-      const resultadoMock = { id: 'psico-1', numeroColegiatura: '999' };
+      const camposActualizar: Partial<Psicologo> = { numeroColegiatura: '999' };
+      const resultadoMock = { id: 'psico-1', numeroColegiatura: '999' } as Psicologo;
       mockPsicologosService.actualizar.mockResolvedValue(resultadoMock);
 
       const resultado = await controller.actualizar('psico-1', camposActualizar);

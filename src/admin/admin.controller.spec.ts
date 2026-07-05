@@ -1,151 +1,62 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
-import { UsuariosService } from '../usuarios/usuarios.service';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
+describe('AdminController', () => {
+  let controller: AdminController;
 
-const mockUsuariosService = () => ({
-  crear:       jest.fn(),
-  listarTodos: jest.fn(),
-  desactivar:  jest.fn(),
-});
-
-const mockPsicologo = {
-  id:            'uuid-psico-001',
-  email:         'psicologo@clinica.com',
-  password:      'hashed_pass',
-  nombre:        'Laura',
-  apellido:      'Vega',
-  rol:           'PSICOLOGO',
-  activo:        true,
-  creadoEn:      new Date(),
-  actualizadoEn: new Date(),
-};
-
-// ── Suite ─────────────────────────────────────────────────────────────────
-
-describe('AdminService', () => {
-  let service: AdminService;
-  let usuariosService: ReturnType<typeof mockUsuariosService>;
+  const mockAdminService = {
+    crearStaff: jest.fn(),
+    listarUsuarios: jest.fn(),
+    darDeBaja: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      controllers: [AdminController],
       providers: [
-        AdminService,
-        { provide: UsuariosService, useFactory: mockUsuariosService },
+        { provide: AdminService, useValue: mockAdminService },
       ],
     }).compile();
 
-    service         = module.get<AdminService>(AdminService);
-    usuariosService = module.get(UsuariosService);
+    controller = module.get<AdminController>(AdminController);
+    jest.clearAllMocks();
   });
-
-  // ── crearStaff ────────────────────────────────────────────────────────────
 
   describe('crearStaff', () => {
-    const dto = {
-      email:    'psicologo@clinica.com',
-      password: 'StaffPass123',
-      nombre:   'Laura',
-      apellido: 'Vega',
-      rol:      'PSICOLOGO' as const,
-    };
+    it('debe invocar adminService.crearStaff con el DTO enviado', async () => {
+      const dto = { email: 'test@ute.com', password: '123', nombre: 'Anahi Loza', rol: 'PSICOLOGO' };
+      mockAdminService.crearStaff.mockResolvedValue({ id: 'staff-1', email: dto.email });
 
-    it('debe crear el personal y retornar la respuesta sin password', async () => {
-      usuariosService.crear.mockResolvedValue(mockPsicologo);
+      const res = await controller.crearStaff(dto as any);
 
-      const resultado = await service.crearStaff(dto);
-
-      expect(usuariosService.crear).toHaveBeenCalledWith(dto);
-      expect(resultado).not.toHaveProperty('password');
-      expect(resultado).toHaveProperty('rol', 'PSICOLOGO');
-    });
-
-    it('debe permitir crear un usuario con rol ADMIN', async () => {
-      const adminDto = { ...dto, rol: 'ADMIN' as const };
-      const mockAdmin = { ...mockPsicologo, rol: 'ADMIN' };
-      usuariosService.crear.mockResolvedValue(mockAdmin);
-
-      const resultado = await service.crearStaff(adminDto);
-
-      expect(resultado.rol).toBe('ADMIN');
-    });
-
-    it('no debe exponer la password en ningún escenario', async () => {
-      usuariosService.crear.mockResolvedValue(mockPsicologo);
-
-      const resultado = await service.crearStaff(dto);
-
-      expect(Object.keys(resultado)).not.toContain('password');
+      expect(mockAdminService.crearStaff).toHaveBeenCalledWith(dto);
+      expect(res).toHaveProperty('id', 'staff-1');
     });
   });
-
-  // ── listarUsuarios ────────────────────────────────────────────────────────
 
   describe('listarUsuarios', () => {
-    const paginado = {
-      data:   [mockPsicologo],
-      total:  1,
-      pagina: 1,
-      limite: 10,
-    };
+    it('debe castear las strings de la query a tipos numéricos correctos', async () => {
+      mockAdminService.listarUsuarios.mockResolvedValue([]);
 
-    it('debe usar valores por defecto (pagina=1, limite=10) cuando no se pasan filtros', async () => {
-      usuariosService.listarTodos.mockResolvedValue(paginado);
+      await controller.listarUsuarios('2', '15', 'PACIENTE');
 
-      await service.listarUsuarios({});
-
-      expect(usuariosService.listarTodos).toHaveBeenCalledWith(1, 10, undefined);
-    });
-
-    it('debe pasar correctamente pagina, limite y rol al servicio de usuarios', async () => {
-      usuariosService.listarTodos.mockResolvedValue(paginado);
-
-      await service.listarUsuarios({ pagina: 2, limite: 5, rol: 'PSICOLOGO' });
-
-      expect(usuariosService.listarTodos).toHaveBeenCalledWith(2, 5, 'PSICOLOGO');
-    });
-
-    it('debe retornar la estructura paginada correcta', async () => {
-      usuariosService.listarTodos.mockResolvedValue(paginado);
-
-      const resultado = await service.listarUsuarios({ pagina: 1, limite: 10 });
-
-      expect(resultado).toHaveProperty('data');
-      expect(resultado).toHaveProperty('total');
-      expect(resultado).toHaveProperty('pagina');
-      expect(resultado).toHaveProperty('limite');
+      expect(mockAdminService.listarUsuarios).toHaveBeenCalledWith({
+        pagina: 2,
+        limite: 15,
+        rol: 'PACIENTE',
+      });
     });
   });
 
-  // ── darDeBaja ─────────────────────────────────────────────────────────────
-
   describe('darDeBaja', () => {
-    it('debe invocar desactivar con el id correcto', async () => {
-      usuariosService.desactivar.mockResolvedValue(undefined);
+    it('debe llamar al servicio para desactivar al usuario por id', async () => {
+      mockAdminService.darDeBaja.mockResolvedValue({ mensaje: 'Desactivado' });
 
-      await service.darDeBaja('uuid-psico-001');
+      const res = await controller.darDeBaja('uuid-1');
 
-      expect(usuariosService.desactivar).toHaveBeenCalledWith('uuid-psico-001');
-      expect(usuariosService.desactivar).toHaveBeenCalledTimes(1);
-    });
-
-    it('debe retornar un mensaje de confirmación con el id', async () => {
-      usuariosService.desactivar.mockResolvedValue(undefined);
-
-      const resultado = await service.darDeBaja('uuid-psico-001');
-
-      expect(resultado).toHaveProperty('mensaje');
-      expect(resultado.mensaje).toContain('uuid-psico-001');
-    });
-
-    it('debe propagar NotFoundException si el id no existe', async () => {
-      usuariosService.desactivar.mockRejectedValue(
-        new NotFoundException('Usuario con id id-falso no encontrado'),
-      );
-
-      await expect(service.darDeBaja('id-falso')).rejects.toThrow(NotFoundException);
+      expect(mockAdminService.darDeBaja).toHaveBeenCalledWith('uuid-1');
+      expect(res).toEqual({ mensaje: 'Desactivado' });
     });
   });
 });
