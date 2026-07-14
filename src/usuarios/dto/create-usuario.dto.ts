@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsString,
   MinLength,
+  IsOptional,
 } from 'class-validator';
 import type { Rol } from '../usuario.entity';
 
@@ -27,4 +28,17 @@ export class CreateUsuarioDto {
     message: 'El rol debe ser PACIENTE, PSICOLOGO o ADMIN',
   })
   rol?: Rol;
+
+  // 🚀 Nuevos campos opcionales permitidos para evitar el error 400 de validación
+  @IsString()
+  @IsOptional()
+  especialidad?: string;
+
+  @IsString()
+  @IsOptional()
+  licenciaProfesional?: string;
+
+  @IsString()
+  @IsOptional()
+  telefono?: string;
 }

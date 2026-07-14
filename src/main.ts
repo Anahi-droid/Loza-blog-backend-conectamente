@@ -6,7 +6,10 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  
+  // 🚀 ¡AÑADE ESTA LÍNEA AQUÍ MISMO PARA REPARAR EL ERROR DE CONEXIÓN!
+  app.enableCors();
+
+  // Configuración de los Pipes globales que ya tenías
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -14,7 +17,6 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
   
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Clínica Psicológica — API')
