@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Usuario } from './usuario.entity';
+import { Psicologo } from '../psicologos/psicologo.entity';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
@@ -18,8 +19,9 @@ export class UsuariosService {
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepo: Repository<Usuario>,
+    @InjectRepository(Psicologo)
+    private readonly psicologoRepo: Repository<Psicologo>,
   ) {}
-
 
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, this.SALT_ROUNDS);
@@ -28,7 +30,6 @@ export class UsuariosService {
   async comparePasswords(plain: string, hashed: string): Promise<boolean> {
     return bcrypt.compare(plain, hashed);
   }
-
 
   async crear(dto: CreateUsuarioDto): Promise<Usuario> {
     const existe = await this.usuarioRepo.findOne({
@@ -40,11 +41,39 @@ export class UsuariosService {
       );
     }
     if (!dto.password) {
-    throw new BadRequestException('La contraseña es requerida');
-}
+      throw new BadRequestException('La contraseña es requerida');
+    }
+
     const passwordHash = await this.hashPassword(dto.password);
-    const usuario = this.usuarioRepo.create({ ...dto, password: passwordHash });
-    return this.usuarioRepo.save(usuario);
+    
+    // Extraemos campos dinámicos para el perfil clínico
+    const { especialidad, licenciaProfesional, telefono, ...datosUsuario } = dto as any;
+
+    // 🚀 Creamos la entidad sin forzar el tipo a la izquierda, dejamos que infiera o lo casteamos al vuelo
+    const usuario = this.usuarioRepo.create(datosUsuario as Partial<Usuario>);
+    usuario.password = passwordHash;
+
+    // Guardamos forzando a que TypeScript reconozca el retorno como una única entidad Usuario
+    const usuarioGuardado = await this.usuarioRepo.save(usuario) as Usuario;
+
+    // Si el rol es PSICOLOGO, creamos el perfil clínico de forma transaccional y directa
+    if (usuarioGuardado.rol === 'PSICOLOGO') {
+      const nuevoPsicologo = this.psicologoRepo.create({
+        numColegiatura: (licenciaProfesional || `REG-${Math.floor(1000 + Math.random() * 9000)}`).trim(),
+        especialidad: (especialidad || 'Terapia General').trim(),
+        biografia: (telefono || 'Sin teléfono').trim(),
+        usuario: usuarioGuardado // Ahora calza perfectamente el tipo Usuario único
+      });
+      await this.psicologoRepo.save(nuevoPsicologo);
+    }
+
+    // Buscamos y retornamos el usuario completo con la relación mapeada para el frontend
+    const usuarioConPerfil = await this.usuarioRepo.findOne({
+      where: { id: usuarioGuardado.id },
+      relations: { perfilPsicologo: true }
+    });
+
+    return usuarioConPerfil || usuarioGuardado;
   }
 
   async actualizar(id: string, dto: UpdateUsuarioDto): Promise<Usuario> {
@@ -63,7 +92,6 @@ export class UsuariosService {
     usuario.activo = false;
     await this.usuarioRepo.save(usuario);
   }
-
 
   async buscarPorEmail(email: string): Promise<Usuario | null> {
     return this.usuarioRepo.findOne({ 
@@ -86,15 +114,18 @@ export class UsuariosService {
 
   async listarTodos(
     pagina = 1,
-    limite = 10,
+    limite = 100, // Límite amplio para evitar que se oculten psicólogos en paginación local
     rol?: string,
   ): Promise<{ data: Usuario[]; total: number; pagina: number; limite: number }> {
-    const query = this.usuarioRepo.createQueryBuilder('u');
+    const query = this.usuarioRepo.createQueryBuilder('u')
+      .leftJoinAndSelect('u.perfilPsicologo', 'perfilPsicologo');
 
     if (rol) {
-      query.where('u.rol = :rol', { rol });
+      query.andWhere('u.rol = :rol', { rol });
     }
 
+    query.andWhere('u.activo = :activo', { activo: true });
+    
     const [data, total] = await query
       .skip((pagina - 1) * limite)
       .take(limite)
