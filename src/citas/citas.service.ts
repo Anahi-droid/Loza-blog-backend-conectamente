@@ -19,6 +19,31 @@ export class CitasService {
     private sesionRepository: Repository<SesionClinica>,
   ) {}
 
+  // 🚀 LISTAR CITAS SEGÚN EL ROL (Resuelve la petición del Frontend)
+  async obtenerCitas(usuarioId: string, rol: string): Promise<Cita[]> {
+    if (rol === 'ADMIN') {
+      return await this.citaRepository.find({
+        relations: { paciente: true, psicologo: true },
+        order: { fechaHora: 'DESC' }
+      });
+    }
+
+    if (rol === 'PSICOLOGO') {
+      return await this.citaRepository.find({
+        where: { psicologo: { id: usuarioId } },
+        relations: { paciente: true, psicologo: true },
+        order: { fechaHora: 'DESC' }
+      });
+    }
+
+    // Si es PACIENTE
+    return await this.citaRepository.find({
+      where: { paciente: { id: usuarioId } },
+      relations: { paciente: true, psicologo: true },
+      order: { fechaHora: 'DESC' }
+    });
+  }
+
   async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
     const agenda = await this.agendaRepository.findOne({
       where: { id: agendaId },
@@ -39,60 +64,40 @@ export class CitasService {
     const nuevaCita = this.citaRepository.create({
       fechaHora: agenda.fechaHoraInicio,
       motivoConsulta: motivo,
-      paciente: { id: pacienteId }, 
+      paciente: { id: pacienteId },
       psicologo: agenda.psicologo,
-      estado: 'PENDIENTE',
     });
 
     const citaGuardada = await this.citaRepository.save(nuevaCita);
 
+    // Generar registro de pago por defecto
     const nuevoPago = this.pagoRepository.create({
-      monto: 35.00,
+      monto: 30.00, // Tarifa estándar
       estado: 'PENDIENTE',
-      cita: citaGuardada
+      cita: citaGuardada,
     });
     await this.pagoRepository.save(nuevoPago);
 
+    // Generar sesión clínica inicial vacía
     const nuevaSesion = this.sesionRepository.create({
-      motivoEvolucion: 'Cita agendada - Esperando sesión',
-      notasPrivadas: 'Ninguna nota ingresada por el profesional',
-      cita: citaGuardada
+      motivoEvolucion: motivo,
+      cita: citaGuardada,
     });
     await this.sesionRepository.save(nuevaSesion);
 
     return citaGuardada;
   }
 
-  async listarMisCitas(usuarioId: string, rol: string): Promise<Cita[]> {
-    if (rol === 'PSICOLOGO') {
-      return await this.citaRepository.find({
-        where: { psicologo: { usuario: { id: usuarioId } } },
-        relations: { paciente: true, psicologo: true },
-        order: { fechaHora: 'DESC' },
-      });
-    } else {
-      return await this.citaRepository.find({
-        where: { paciente: { id: usuarioId } },
-        relations: { psicologo: true },
-        order: { fechaHora: 'DESC' },
-      });
-    }
-  }
-
   async obtenerCitaPorId(id: string, usuarioId: string, rol: string): Promise<Cita> {
     const cita = await this.citaRepository.findOne({
       where: { id },
-      relations: {
-        paciente: true,
-        psicologo: true, // Quitamos el "psicologo.usuario" que rompía la consulta
-      },
+      relations: { paciente: true, psicologo: true }
     });
 
     if (!cita) {
       throw new NotFoundException('La cita solicitada no existe.');
     }
 
-    // Regla de seguridad según rol: Si es paciente validamos su id directo
     if (rol === 'PACIENTE' && cita.paciente?.id !== usuarioId) {
       throw new ForbiddenException('No tienes permisos para visualizar esta cita.');
     }
@@ -136,9 +141,8 @@ export class CitasService {
           psicologo: { id: cita.psicologo.id } 
         }
       });
-
       if (agenda) {
-        agenda.estaReservado = false; 
+        agenda.estaReservado = false;
         await this.agendaRepository.save(agenda);
       }
     }
