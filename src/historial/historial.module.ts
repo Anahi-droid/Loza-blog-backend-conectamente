@@ -12,6 +12,7 @@ import { Tratamiento } from './tratamiento.entity';
   ], 
   controllers: [HistorialController],
   providers: [HistorialService],
-  exports: [HistorialService],
+  // 🚀 EXPORTS CORREGIDO: Compartimos el TypeOrmModule para que Citas pueda usar el HistorialRepository
+  exports: [HistorialService, TypeOrmModule], 
 })
 export class HistorialModule {}

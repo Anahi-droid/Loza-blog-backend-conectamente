@@ -5,6 +5,7 @@ import { Cita, EstadoCita } from '../citas/cita.entity';
 import { Agenda } from '../agenda/agenda.entity';
 import { Pago } from './pago.entity';
 import { SesionClinica } from './sesion-clinica.entity';
+import { Historial } from '../historial/historial.entity'; // 🚀 IMPORTACIÓN AGREGADA
 
 @Injectable()
 export class CitasService {
@@ -17,29 +18,33 @@ export class CitasService {
     private pagoRepository: Repository<Pago>,
     @InjectRepository(SesionClinica)
     private sesionRepository: Repository<SesionClinica>,
+    @InjectRepository(Historial)
+    private readonly historialRepository: Repository<Historial>, // 🚀 Inyectamos el repositorio
   ) {}
 
   // 🚀 LISTAR CITAS SEGÚN EL ROL (Resuelve la petición del Frontend)
+  // 🚀 MÉTODO CORREGIDO CON FILTRADO PROFUNDO DE RELACIONES
   async obtenerCitas(usuarioId: string, rol: string): Promise<Cita[]> {
     if (rol === 'ADMIN') {
       return await this.citaRepository.find({
-        relations: { paciente: true, psicologo: true },
+        relations: { paciente: true, psicologo: { usuario: true } },
         order: { fechaHora: 'DESC' }
       });
     }
 
     if (rol === 'PSICOLOGO') {
+      // 🎯 Filtramos buscando el usuario_id dentro de la relación del psicólogo
       return await this.citaRepository.find({
-        where: { psicologo: { id: usuarioId } },
-        relations: { paciente: true, psicologo: true },
+        where: { psicologo: { usuario: { id: usuarioId } } },
+        relations: { paciente: true, psicologo: { usuario: true } },
         order: { fechaHora: 'DESC' }
       });
     }
 
-    // Si es PACIENTE
+    // Si es PACIENTE (su ID de usuario está directo en la columna paciente_id de la cita)
     return await this.citaRepository.find({
       where: { paciente: { id: usuarioId } },
-      relations: { paciente: true, psicologo: true },
+      relations: { paciente: true, psicologo: { usuario: true } },
       order: { fechaHora: 'DESC' }
     });
   }
@@ -117,6 +122,7 @@ export class CitasService {
     if (estado) cita.estado = estado;
     if (notasMedicas) cita.notasNotasMedicas = notasMedicas;
 
+    // 🚀 Registro duplicado eliminado por completo. El frontend ya hace la inserción limpia.
     return await this.citaRepository.save(cita);
   }
 
