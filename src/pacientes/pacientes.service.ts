@@ -61,21 +61,6 @@ export class PacientesService {
     return pacienteCompleto || pacienteGuardado;
   }
 
-  // 🚀 RETORNA DIRECTAMENTE PACIENTES EN LUGAR DE USUARIOS
-  async findAll(): Promise<Paciente[]> {
-    return await this.pacienteRepository.find({
-      where: {
-        usuario: { activo: true }
-      },
-      relations: {
-        usuario: true // Traemos los datos de nombre, apellido y correo
-      },
-      order: {
-        creadoEn: 'DESC'
-      }
-    });
-  }
-
   async findOne(id: string): Promise<Paciente> {
     const paciente = await this.pacienteRepository.findOne({
       where: { id, usuario: { activo: true } },
@@ -126,5 +111,28 @@ export class PacientesService {
 
     await this.pacienteRepository.remove(paciente);
     return { deleted: true };
+  }
+
+  // 🎯 CORREGIDO: Filtra dinámicamente según las reglas de negocio y roles del sistema
+  async findAll(usuarioLogueado: { id: string; rol: string }): Promise<Paciente[]> {
+    // 👑 REGLA ADMIN: Si es administrador, ve absolutamente todos los expedientes activos
+    if (usuarioLogueado.rol === 'ADMIN') {
+      return await this.pacienteRepository.find({
+        where: { usuario: { activo: true } },
+        relations: { usuario: true },
+        order: { creadoEn: 'DESC' }
+      });
+    }
+
+    // 🩺 REGLA PSICÓLOGO: Solo puede ver pacientes si tiene citas registradas con ellos
+    return await this.pacienteRepository.createQueryBuilder('paciente')
+      .innerJoinAndSelect('paciente.usuario', 'usuario', 'usuario.activo = :activo', { activo: true })
+      .innerJoin('paciente.citas', 'cita')
+      .innerJoin('cita.psicologo', 'psicologo')
+      .innerJoin('psicologo.usuario', 'psicologoUsuario', 'psicologoUsuario.id = :psicologoUsuarioId', { 
+        psicologoUsuarioId: usuarioLogueado.id 
+      })
+      .orderBy('paciente.creadoEn', 'DESC')
+      .getMany();
   }
 }
