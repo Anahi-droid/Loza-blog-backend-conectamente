@@ -47,6 +47,8 @@ export class AuthService {
       sub: usuario.id!,
       rol: usuario.rol!,
       email: usuario.email!,
+      nombre: usuario.nombre!,
+      apellido: usuario.apellido!,
       psicologoId: psicologoId, 
     };
 
