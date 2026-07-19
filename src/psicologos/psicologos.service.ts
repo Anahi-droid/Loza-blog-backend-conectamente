@@ -29,6 +29,7 @@ export class PsicologosService {
   }
 
   async listarTodos(): Promise<Psicologo[]> {
+    // Trae los perfiles médicos cuyo usuario asociado permanezca ACTIVO en el sistema
     return await this.psicologoRepository.find({
       relations: { usuario: true },
       where: { usuario: { activo: true } }
@@ -48,15 +49,16 @@ export class PsicologosService {
     return await this.psicologoRepository.save(psicologo);
   }
 
+  // 🚀 OPTION A: Borrado lógico seguro integrado directamente en el repositorio global
   async eliminar(usuarioId: string): Promise<void> {
-    const psicologo = await this.psicologoRepository.findOne({ 
-      where: { usuario: { id: usuarioId } } 
-    });
+    const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
 
-    if (!psicologo) {
-      throw new NotFoundException(`Perfil de psicólogo para el usuario con ID ${usuarioId} no encontrado.`);
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con ID ${usuarioId} no encontrado en el sistema.`);
     }
     
-    await this.psicologoRepository.remove(psicologo);
+    // Cambiamos el estado de la cuenta a inactivo en lugar de extirpar el registro físico
+    usuario.activo = false;
+    await this.usuarioRepository.save(usuario);
   }
 }

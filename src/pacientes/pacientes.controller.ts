@@ -6,11 +6,14 @@ import {
   Patch, 
   Param, 
   Delete, 
-  ParseUUIDPipe 
+  ParseUUIDPipe,
+  UseGuards,
+  Req
 } from '@nestjs/common';
 import { PacientesService } from './pacientes.service';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('pacientes')
 export class PacientesController {
@@ -21,9 +24,12 @@ export class PacientesController {
     return this.pacientesService.create(createPacienteDto);
   }
 
+  // 🎯 CORREGIDO: Protegemos el listado y capturamos la petición del usuario activo
+  @UseGuards(JwtAuthGuard)
   @Get()
-  findAll() {
-    return this.pacientesService.findAll();
+  findAll(@Req() req: any) {
+    const usuarioLogueado = req.user; // Trae { id, email, rol } inyectado por tu estrategia JWT
+    return this.pacientesService.findAll(usuarioLogueado);
   }
 
   @Get(':id')
