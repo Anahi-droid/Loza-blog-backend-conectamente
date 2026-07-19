@@ -5,6 +5,7 @@ import { Cita, EstadoCita } from '../citas/cita.entity';
 import { Agenda } from '../agenda/agenda.entity';
 import { Pago } from './pago.entity';
 import { SesionClinica } from './sesion-clinica.entity';
+import { Historial } from '../historial/historial.entity'; 
 
 @Injectable()
 export class CitasService {
@@ -17,31 +18,47 @@ export class CitasService {
     private pagoRepository: Repository<Pago>,
     @InjectRepository(SesionClinica)
     private sesionRepository: Repository<SesionClinica>,
+    @InjectRepository(Historial)
+    private readonly historialRepository: Repository<Historial>, 
   ) {}
 
-  // 🚀 LISTAR CITAS SEGÚN EL ROL (Resuelve la petición del Frontend)
-  async obtenerCitas(usuarioId: string, rol: string): Promise<Cita[]> {
+  // 🚀 MÉTODO CORREGIDO: Inyecta de forma segura la información del pago adjunto
+  async obtenerCitas(usuarioId: string, rol: string): Promise<any[]> {
+    let citas: Cita[] = [];
+
     if (rol === 'ADMIN') {
-      return await this.citaRepository.find({
-        relations: { paciente: true, psicologo: true },
+      citas = await this.citaRepository.find({
+        relations: { paciente: true, psicologo: { usuario: true } },
+        order: { fechaHora: 'DESC' }
+      });
+    } else if (rol === 'PSICOLOGO') {
+      citas = await this.citaRepository.find({
+        where: { psicologo: { usuario: { id: usuarioId } } },
+        relations: { paciente: true, psicologo: { usuario: true } },
+        order: { fechaHora: 'DESC' }
+      });
+    } else {
+      citas = await this.citaRepository.find({
+        where: { paciente: { id: usuarioId } },
+        relations: { paciente: true, psicologo: { usuario: true } },
         order: { fechaHora: 'DESC' }
       });
     }
 
-    if (rol === 'PSICOLOGO') {
-      return await this.citaRepository.find({
-        where: { psicologo: { id: usuarioId } },
-        relations: { paciente: true, psicologo: true },
-        order: { fechaHora: 'DESC' }
-      });
-    }
+    // 🎯 Mapeo seguro: Buscamos el pago correspondiente en la base de datos para cada cita
+    const citasConPagos = await Promise.all(
+      citas.map(async (cita) => {
+        const pagoAsociado = await this.pagoRepository.findOne({
+          where: { cita: { id: cita.id } }
+        });
+        return {
+          ...cita,
+          pago: pagoAsociado || null // Se le adjunta al objeto final para que el frontend lo pinte limpio
+        };
+      })
+    );
 
-    // Si es PACIENTE
-    return await this.citaRepository.find({
-      where: { paciente: { id: usuarioId } },
-      relations: { paciente: true, psicologo: true },
-      order: { fechaHora: 'DESC' }
-    });
+    return citasConPagos;
   }
 
   async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
@@ -70,15 +87,13 @@ export class CitasService {
 
     const citaGuardada = await this.citaRepository.save(nuevaCita);
 
-    // Generar registro de pago por defecto
     const nuevoPago = this.pagoRepository.create({
-      monto: 30.00, // Tarifa estándar
+      monto: 30.00, 
       estado: 'PENDIENTE',
       cita: citaGuardada,
     });
     await this.pagoRepository.save(nuevoPago);
 
-    // Generar sesión clínica inicial vacía
     const nuevaSesion = this.sesionRepository.create({
       motivoEvolucion: motivo,
       cita: citaGuardada,
@@ -89,15 +104,20 @@ export class CitasService {
   }
 
   async obtenerCitaPorId(id: string, usuarioId: string, rol: string): Promise<Cita> {
+    // 🚀 CORREGIDO: Inyectamos la relación profunda para evitar que TypeORM limpie las llaves foráneas al hacer .save()
     const cita = await this.citaRepository.findOne({
       where: { id },
-      relations: { paciente: true, psicologo: true }
+      relations: { 
+        paciente: true, 
+        psicologo: { usuario: true } // 🎯 Crucial para mantener intacto el id del psicólogo y su dueño
+      }
     });
 
     if (!cita) {
       throw new NotFoundException('La cita solicitada no existe.');
     }
 
+    // Validación de seguridad para que los pacientes no husmeen otras citas
     if (rol === 'PACIENTE' && cita.paciente?.id !== usuarioId) {
       throw new ForbiddenException('No tienes permisos para visualizar esta cita.');
     }
@@ -148,5 +168,16 @@ export class CitasService {
     }
 
     await this.citaRepository.remove(cita);
+  }
+
+  async actualizarEstadoPago(pagoId: string, estado: string): Promise<Pago> {
+    const pago = await this.pagoRepository.findOne({ where: { id: pagoId } });
+    
+    if (!pago) {
+      throw new NotFoundException(`El registro de pago con ID ${pagoId} no fue encontrado.`);
+    }
+
+    pago.estado = estado;
+    return await this.pagoRepository.save(pago);
   }
 }

@@ -71,4 +71,16 @@ export class CitasController {
   async eliminarCita(@Param('id') id: string, @Req() req) {
     return this.citasService.eliminarCita(id, req.user.id, req.user.rol);
   }
+
+  // 🚀 NUEVO ENDPOINT: Actualizar el estado de un pago específico
+  @Patch('pagos/:pagoId')
+  @ApiOperation({ summary: 'Actualizar el estado transaccional de un pago (Ej: PAGADO)' })
+  @ApiResponse({ status: 200, description: 'Estado del pago actualizado con éxito.' })
+  async actualizarEstadoPago(
+    @Param('pagoId') pagoId: string,
+    @Body('estado') estado: string,
+  ) {
+    return this.citasService.actualizarEstadoPago(pagoId, estado);
+  }
+
 }
