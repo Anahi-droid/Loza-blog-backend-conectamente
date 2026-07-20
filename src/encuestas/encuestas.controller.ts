@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Put, Delete, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Put, Delete, Req, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EncuestasService } from './encuestas.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
@@ -29,6 +29,15 @@ export class EncuestasController {
   @ApiOperation({ summary: 'Obtener los resultados de respuestas de una encuesta específica' })
   obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string) {
     return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId);
+  }
+
+  @Get('metricas/generales')
+  @ApiOperation({ summary: 'Obtener métricas generales de encuestas (Admin/Psicólogo)' })
+  async obtenerMetricasGenerales(@Req() req) {
+    if (req.user.rol !== 'ADMIN' && req.user.rol !== 'PSICOLOGO') {
+      throw new ForbiddenException('No tienes permisos para ver estas métricas.');
+    }
+    return this.encuestasService.obtenerMetricasGenerales();
   }
 
   @Get(':id')
