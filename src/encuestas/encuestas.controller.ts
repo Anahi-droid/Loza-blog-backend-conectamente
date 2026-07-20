@@ -40,6 +40,12 @@ export class EncuestasController {
     return this.encuestasService.obtenerMetricasGenerales();
   }
 
+  @Get('mis-respuestas')
+  @ApiOperation({ summary: 'Obtener las respuestas del usuario autenticado' })
+  async obtenerMisRespuestas(@Req() req) {
+    return this.encuestasService.obtenerMisRespuestas(req.user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener una encuesta por ID' })
   findOne(@Param('id') id: string) {
