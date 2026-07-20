@@ -88,8 +88,16 @@ export class UsuariosService {
   }
 
   async desactivar(id: string): Promise<void> {
-    const usuario = await this.buscarPorId(id);
+    // 🎯 Cambiado para que no falle si se manipula un usuario inactivo
+    const usuario = await this.buscarPorIdAdministrativo(id);
     usuario.activo = false;
+    await this.usuarioRepo.save(usuario);
+  }
+
+  async activar(id: string): Promise<void> {
+    // 🎯 Busca al usuario ignorando si está inactivo y le devuelve el acceso
+    const usuario = await this.buscarPorIdAdministrativo(id);
+    usuario.activo = true;
     await this.usuarioRepo.save(usuario);
   }
 
@@ -114,7 +122,7 @@ export class UsuariosService {
 
   async listarTodos(
     pagina = 1,
-    limite = 100, // Límite amplio para evitar que se oculten psicólogos en paginación local
+    limite = 10,
     rol?: string,
   ): Promise<{ data: Usuario[]; total: number; pagina: number; limite: number }> {
     const query = this.usuarioRepo.createQueryBuilder('u')
@@ -124,7 +132,9 @@ export class UsuariosService {
       query.andWhere('u.rol = :rol', { rol });
     }
 
-    query.andWhere('u.activo = :activo', { activo: true });
+    // 🎯 CORREGIDO: Eliminamos el filtro estricto de activo=true para que el Admin vea a todos
+    // Sencillamente ordenamos por los creados más recientemente
+    query.orderBy('u.creadoEn', 'DESC');
     
     const [data, total] = await query
       .skip((pagina - 1) * limite)
@@ -133,4 +143,16 @@ export class UsuariosService {
 
     return { data, total, pagina, limite };
   }
+
+  // 🎯 NUEVO MÉTODO: Permite al repositorio encontrar al usuario sin importar su estado de actividad
+  async buscarPorIdAdministrativo(id: string): Promise<Usuario> {
+    const usuario = await this.usuarioRepo.findOne({
+      where: { id },
+    });
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con id ${id} no encontrado`);
+    }
+    return usuario;
+  }
+
 }
