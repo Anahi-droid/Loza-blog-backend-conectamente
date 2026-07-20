@@ -1,11 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Paciente } from './paciente.entity';
 import { Usuario } from '../usuarios/usuario.entity';
-import { Cita } from '../citas/cita.entity'; 
-import { Psicologo } from '../psicologos/psicologo.entity'; 
 import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
 
@@ -18,26 +16,24 @@ export class PacientesService {
     private readonly pacienteRepository: Repository<Paciente>,
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
-    @InjectRepository(Cita)
-    private readonly citaRepository: Repository<Cita>, 
-    @InjectRepository(Psicologo)
-    private readonly psicologoRepository: Repository<Psicologo>, 
   ) {}
 
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, this.SALT_ROUNDS);
   }
 
-  // 🚀 CREACIÓN UNIFICADA LIMPIA CON ASIGNACIÓN DE PROPIEDAD DIRECTA
-  async create(createPacienteDto: CreatePacienteDto & { creadorId?: string; creadorRol?: string }): Promise<Paciente> {
-    const { nombre, apellido, email, fechaNacimiento, creadorId, creadorRol, ...datosPaciente } = createPacienteDto as any;
+// 🚀 CREACIÓN UNIFICADA EN UN SOLO PASO
+  async create(createPacienteDto: CreatePacienteDto): Promise<Paciente> {
+    const { nombre, apellido, email, fechaNacimiento, ...datosPaciente } = createPacienteDto;
 
+    // 1. Verificar si el correo ya está registrado en la base de datos
     const existeUsuario = await this.usuarioRepository.findOne({ where: { email } });
     if (existeUsuario) {
       throw new ConflictException(`Ya existe un usuario registrado con el correo ${email}`);
     }
 
-    const passwordHash = await this.hashPassword('Paciente123*');
+    // 2. Crear la cuenta de Usuario base con rol PACIENTE
+    const passwordHash = await this.hashPassword('Paciente123*'); // Contraseña temporal
     const nuevoUsuario = this.usuarioRepository.create({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
@@ -47,23 +43,16 @@ export class PacientesService {
     });
     const usuarioGuardado = await this.usuarioRepository.save(nuevoUsuario) as Usuario;
 
-    // 🩺 Buscar si el creador es un psicólogo para asignarlo directamente como dueño de la ficha
-    let psicologoAsignado: Psicologo | null = null;
-    if (creadorRol === 'PSICOLOGO' && creadorId) {
-      psicologoAsignado = await this.psicologoRepository.findOne({
-        where: { usuario: { id: creadorId } }
-      });
-    }
-
+    // 3. Crear el expediente clínico del Paciente
     const nuevoPaciente = this.pacienteRepository.create({
       ...datosPaciente,
-      fechaNacimiento: new Date(fechaNacimiento),
+      fechaNacimiento: new Date(fechaNacimiento), // Mapeado correctamente a tipo Date
       usuario: usuarioGuardado,
-      psicologo: psicologoAsignado, // 🎯 Enlazado nativamente aquí sin citas intermedias fakes
     });
     
     const pacienteGuardado = await this.pacienteRepository.save(nuevoPaciente) as Paciente;
 
+    // 4. Retornar el paciente completo con la relación de usuario cargada
     const pacienteCompleto = await this.pacienteRepository.findOne({
       where: { id: pacienteGuardado.id },
       relations: { usuario: true }
@@ -99,6 +88,7 @@ export class PacientesService {
     
     const paciente = await this.findOne(id);
 
+    // Si se envían cambios del usuario vinculado, los actualizamos de una vez
     if (paciente.usuario && (nombre || apellido)) {
       if (nombre) paciente.usuario.nombre = nombre.trim();
       if (apellido) paciente.usuario.apellido = apellido.trim();
@@ -112,6 +102,8 @@ export class PacientesService {
   async remove(id: string): Promise<{ deleted: boolean }> {
     const paciente = await this.findOne(id);
     
+    // Desactivamos el usuario en lugar de borrar físicamente si prefieres borrado lógico, 
+    // o hacemos CASCADE si borramos el expediente clínico directamente.
     if (paciente.usuario) {
       paciente.usuario.activo = false;
       await this.usuarioRepository.save(paciente.usuario);
@@ -121,8 +113,9 @@ export class PacientesService {
     return { deleted: true };
   }
 
-  // 🩺 FILTRO DE PRIVACIDAD INTEGRAL: Muestra los pacientes creados por él O que tengan cita con él
+  // 🎯 CORREGIDO: Filtra dinámicamente según las reglas de negocio y roles del sistema
   async findAll(usuarioLogueado: { id: string; rol: string }): Promise<Paciente[]> {
+    // 👑 REGLA ADMIN: Si es administrador, ve absolutamente todos los expedientes activos
     if (usuarioLogueado.rol === 'ADMIN') {
       return await this.pacienteRepository.find({
         where: { usuario: { activo: true } },
@@ -131,20 +124,15 @@ export class PacientesService {
       });
     }
 
-    // El psicólogo ve pacientes de los cuales es dueño directo O con quienes tiene una cita agendada
-    return await this.pacienteRepository.createQueryBuilder('paciente')
-      .innerJoinAndSelect('paciente.usuario', 'usuario', 'usuario.activo = :activo', { activo: true })
-      .leftJoin('paciente.psicologo', 'psicologoDirecto')
-      .leftJoin('psicologoDirecto.usuario', 'psicologoDirectoUsuario')
-      .leftJoin('usuario.citas', 'cita') 
-      .leftJoin('cita.psicologo', 'psicologoCita')
-      .leftJoin('psicologoCita.usuario', 'psicologoCitaUsuario')
-      .where('psicologoDirectoUsuario.id = :id OR psicologoCitaUsuario.id = :id', { id: usuarioLogueado.id })
-      .orderBy('paciente.creadoEn', 'DESC')
-      .getMany();
+    // 🩺 REGLA PSICÓLOGO: Puede ver todos los pacientes activos para poder agendar citas
+    return await this.pacienteRepository.find({
+      where: { usuario: { activo: true } },
+      relations: { usuario: true },
+      order: { creadoEn: 'DESC' }
+    });
   }
 
-  // 🚀 PARA EL BUSCADOR GLOBAL DEL MODAL: Envía todos los pacientes activos
+  // 🚀 AGREGA ESTE MÉTODO AL FINAL DE LA CLASE:
   async obtenerTodosActivos(): Promise<Paciente[]> {
     return await this.pacienteRepository.find({
       where: { usuario: { activo: true } },
