@@ -19,17 +19,29 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class PacientesController {
   constructor(private readonly pacientesService: PacientesService) {}
 
+  // 🎯 CORREGIDO: Protegido con JWT para inyectar el ID y Rol del profesional que registra al paciente
+  @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() createPacienteDto: CreatePacienteDto) {
-    return this.pacientesService.create(createPacienteDto);
+  create(@Body() createPacienteDto: CreatePacienteDto, @Req() req) {
+    const datosConCreador = {
+      ...createPacienteDto,
+      creadorId: req.user?.id,
+      creadorRol: req.user?.rol
+    };
+    return this.pacientesService.create(datosConCreador);
   }
 
-  // 🎯 CORREGIDO: Protegemos el listado y capturamos la petición del usuario activo
+  // 🚀 Mantiene el filtro hermético por Token/Rol para la tabla principal
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@Req() req: any) {
-    const usuarioLogueado = req.user; // Trae { id, email, rol } inyectado por tu estrategia JWT
-    return this.pacientesService.findAll(usuarioLogueado);
+  findAll(@Req() req) {
+    return this.pacientesService.findAll(req.user);
+  }
+
+  // 🎯 RUTA ESTRATÉGICA: Posicionada antes de ':id' para evitar colisiones en NestJS. Exclusiva para el modal de citas.
+  @Get('buscar/todos')
+  obtenerTodosParaCitas() {
+    return this.pacientesService.obtenerTodosActivos();
   }
 
   @Get(':id')

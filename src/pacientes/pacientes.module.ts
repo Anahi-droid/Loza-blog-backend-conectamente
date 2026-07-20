@@ -3,15 +3,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PacientesService } from './pacientes.service';
 import { PacientesController } from './pacientes.controller';
 import { Paciente } from './paciente.entity';
-import { Usuario } from '../usuarios/usuario.entity'; // Importa la entidad Usuario
+import { Usuario } from '../usuarios/usuario.entity'; 
+import { Cita } from '../citas/cita.entity'; // 🎯 IMPORTADO
+import { Psicologo } from '../psicologos/psicologo.entity'; // 🎯 IMPORTADO
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Paciente, Usuario]), 
+    // 🎯 REPOSITORIOS REGISTRADOS: Agregamos Cita y Psicologo para que el servicio los use sin romper
+    TypeOrmModule.forFeature([Paciente, Usuario, Cita, Psicologo]), 
   ],
   controllers: [PacientesController],
   providers: [PacientesService],
 })
 export class PacientesModule {}
-
-
