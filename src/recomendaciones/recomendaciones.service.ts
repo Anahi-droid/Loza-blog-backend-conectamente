@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Recomendacion } from './recomendacion.entity';
 import { Progreso } from '../progreso/progreso.entity'; 
+import { Paciente } from '../pacientes/paciente.entity';
 import { CreateRecomendacionDto } from './dto/create-recomendacione.dto';
 import { UpdateRecomendacionDto } from './dto/update-recomendacione.dto';
 
@@ -13,6 +14,8 @@ export class RecomendacionesService {
     private readonly recomendacionRepository: Repository<Recomendacion>,
     @InjectRepository(Progreso)
     private readonly progresoRepository: Repository<Progreso>,
+    @InjectRepository(Paciente)
+    private readonly pacienteRepository: Repository<Paciente>,
   ) {}
 
 
@@ -27,10 +30,44 @@ export class RecomendacionesService {
     return await this.recomendacionRepository.save(nuevaRecomendacion);
   }
 
-  async findAll(): Promise<Recomendacion[]> {
-    return await this.recomendacionRepository.find({
-      relations: { paciente: true, psicologo: true },
-    });
+  async findAll(usuarioId?: string, rol?: string): Promise<Recomendacion[]> {
+    // Si no se proporciona usuario, retornar todas (para admin o desarrollo)
+    if (!usuarioId || !rol) {
+      return await this.recomendacionRepository.find({
+        relations: { paciente: true, psicologo: true },
+      });
+    }
+
+    // Filtrar según el rol del usuario
+    if (rol === 'ADMIN') {
+      return await this.recomendacionRepository.find({
+        relations: { paciente: true, psicologo: true },
+      });
+    }
+
+    if (rol === 'PSICOLOGO') {
+      // El psicólogo ve las recomendaciones de sus pacientes
+      // Buscamos recomendaciones donde el paciente tenga como psicólogo a este usuario
+      return await this.recomendacionRepository
+        .createQueryBuilder('recomendacion')
+        .leftJoinAndSelect('recomendacion.paciente', 'paciente')
+        .leftJoinAndSelect('recomendacion.psicologo', 'psicologo')
+        .leftJoinAndSelect('paciente.psicologo', 'psicologoPaciente')
+        .leftJoinAndSelect('psicologoPaciente.usuario', 'usuarioPsicologo')
+        .where('usuarioPsicologo.id = :usuarioId', { usuarioId })
+        .getMany();
+    }
+
+    if (rol === 'PACIENTE') {
+      // El paciente ve solo sus propias recomendaciones
+      return await this.recomendacionRepository.find({
+        where: { paciente: { id: usuarioId } },
+        relations: { paciente: true, psicologo: true },
+      });
+    }
+
+    // Por defecto, no retornar nada si el rol no es reconocido
+    return [];
   }
 
   async findOne(id: string): Promise<Recomendacion> {
@@ -42,7 +79,31 @@ export class RecomendacionesService {
     return recomendacion;
   }
 
-  async findByPaciente(pacienteId: string): Promise<Recomendacion[]> {
+  async findByPaciente(pacienteId: string, usuarioId?: string, rol?: string): Promise<Recomendacion[]> {
+    // Validar que el usuario tenga permiso para ver las recomendaciones de este paciente
+    if (usuarioId && rol) {
+      if (rol === 'PACIENTE') {
+        // Un paciente solo puede ver sus propias recomendaciones
+        if (pacienteId !== usuarioId) {
+          throw new ForbiddenException('No tienes permiso para ver las recomendaciones de este paciente');
+        }
+      } else if (rol === 'PSICOLOGO') {
+        // Un psicólogo solo puede ver las recomendaciones de sus pacientes
+        // Verificamos que el paciente tenga asignado a este psicólogo
+        const paciente = await this.pacienteRepository.findOne({
+          where: { 
+            id: pacienteId,
+            psicologo: { usuario: { id: usuarioId } }
+          },
+          relations: { psicologo: true }
+        });
+
+        if (!paciente) {
+          throw new ForbiddenException('No tienes permiso para ver las recomendaciones de este paciente');
+        }
+      }
+    }
+
     return await this.recomendacionRepository.find({
       where: { paciente: { id: pacienteId } },
       relations: { psicologo: true, paciente: true }, 

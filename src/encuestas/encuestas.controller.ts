@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateEncuestaDto } from './dto/create-encuesta.dto';
 import { CreateRespuestaDto } from './dto/create-respuesta.dto';
 import { UpdateEncuestaDto } from './dto/update-encuesta.dto';
+import { AsignarEncuestaDto } from './dto/asignar-encuesta.dto';
 
 @ApiTags('encuestas')
 @ApiBearerAuth('jwt-auth')
@@ -15,8 +16,9 @@ export class EncuestasController {
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva plantilla de encuesta con preguntas dinámicas' })
-  create(@Body() createEncuestaDto: CreateEncuestaDto) {
-    return this.encuestasService.create(createEncuestaDto);
+  create(@Req() req, @Body() createEncuestaDto: CreateEncuestaDto) {
+    const psicologoId = req.user.id;
+    return this.encuestasService.create(createEncuestaDto, psicologoId);
   }
 
   @Get()
@@ -27,8 +29,9 @@ export class EncuestasController {
 
   @Get(':id/respuestas')
   @ApiOperation({ summary: 'Obtener los resultados de respuestas de una encuesta específica' })
-  obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string) {
-    return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId);
+  obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string, @Req() req) {
+    const psicologoId = req.user.id;
+    return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId, psicologoId);
   }
 
   @Get('metricas/generales')
@@ -72,5 +75,26 @@ export class EncuestasController {
   @ApiOperation({ summary: 'Eliminar una encuesta por ID' })
   remove(@Param('id') id: string) {
     return this.encuestasService.remove(id);
+  }
+
+  @Post(':id/asignar')
+  @ApiOperation({ summary: 'Asignar una encuesta a un paciente' })
+  asignarEncuesta(@Param('id') encuestaId: string, @Req() req, @Body() asignarEncuestaDto: AsignarEncuestaDto) {
+    const psicologoId = req.user.id;
+    return this.encuestasService.asignarEncuesta(encuestaId, psicologoId, asignarEncuestaDto.pacienteId);
+  }
+
+  @Get('mis-asignadas')
+  @ApiOperation({ summary: 'Obtener encuestas asignadas al psicólogo autenticado' })
+  obtenerMisEncuestasAsignadas(@Req() req) {
+    const psicologoId = req.user.id;
+    return this.encuestasService.obtenerEncuestasAsignadas(psicologoId);
+  }
+
+  @Get('mis-encuestas')
+  @ApiOperation({ summary: 'Obtener encuestas asignadas al paciente autenticado' })
+  obtenerMisEncuestas(@Req() req) {
+    const pacienteId = req.user.id;
+    return this.encuestasService.obtenerMisEncuestasAsignadas(pacienteId);
   }
 }
