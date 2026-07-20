@@ -12,13 +12,10 @@ export class PsicologosController {
     return this.psicologosService.listarTodos();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post('perfil/:usuarioId')
-  crearPerfil(
-    @Param('usuarioId') usuarioId: string,
-    @Body() datosProf: Partial<Psicologo>
-  ) {
-    return this.psicologosService.crearPerfil(usuarioId, datosProf);
+  // 🎯 CORREGIDO: Ahora recibe la data unificada directamente en la raíz mediante POST /psicologos
+  @Post()
+  crearPerfil(@Body() datosUnificados: any) {
+    return this.psicologosService.crearPerfilUnificado(datosUnificados);
   }
 
   @UseGuards(JwtAuthGuard)

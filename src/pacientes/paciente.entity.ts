@@ -5,6 +5,7 @@ import {
   OneToOne, 
   JoinColumn, 
   OneToMany,
+  ManyToOne, // 🎯 AGREGADO
   CreateDateColumn, 
   UpdateDateColumn 
 } from 'typeorm';
@@ -12,6 +13,7 @@ import { Usuario } from '../usuarios/usuario.entity';
 import { Cita } from '../citas/cita.entity';
 import { Historial } from '../historial/historial.entity';
 import { Recomendacion } from '../recomendaciones/recomendacion.entity';
+import { Psicologo } from '../psicologos/psicologo.entity'; // 🎯 AGREGADO
 
 @Entity('pacientes')
 export class Paciente {
@@ -21,6 +23,11 @@ export class Paciente {
   @OneToOne(() => Usuario, (usuario) => usuario.perfilPaciente, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuario_id' })
   usuario?: Usuario;
+
+  // 🎯 RELACIÓN DIRECTA DE DUEÑO: Guarda de forma nativa qué psicólogo registró este expediente clínico
+  @ManyToOne(() => Psicologo, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'psicologo_id' })
+  psicologo?: Psicologo;
 
   @Column({ name: 'fecha_nacimiento', type: 'date' })
   fechaNacimiento?: Date;

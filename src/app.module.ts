@@ -16,6 +16,7 @@ import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometri
 import { PacientesModule } from './pacientes/pacientes.module';
 import { PsicologosModule } from './psicologos/psicologos.module';
 import { AgendaModule } from './agenda/agenda.module';
+import { EspecialidadesModule } from './especialidades/especialidades.module'
 import { CitasModule } from './citas/citas.module'; 
 import { Usuario } from './usuarios/usuario.entity';
 import { Psicologo } from './psicologos/psicologo.entity';
@@ -93,6 +94,7 @@ import { Paciente } from './pacientes/paciente.entity';
     PsicologosModule,
     AgendaModule,
     CitasModule,
+    EspecialidadesModule,
   ],
 })
 export class AppModule {}

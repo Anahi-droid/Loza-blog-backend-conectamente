@@ -61,4 +61,40 @@ export class PsicologosService {
     usuario.activo = false;
     await this.usuarioRepository.save(usuario);
   }
+
+
+  // 🎯 NUEVO MÉTODO: Maneja la creación en cascada de Usuario y Perfil Médico
+  async crearPerfilUnificado(payload: any): Promise<Psicologo> {
+    const { nombre, apellido, email, password, especialidad, numColegiatura, telefono } = payload;
+
+    // 1. Verificar si el email ya existe
+    const existeUsuario = await this.usuarioRepository.findOne({ where: { email } });
+    if (existeUsuario) {
+      throw new Error(`El correo ${email} ya está registrado en la plataforma.`);
+    }
+
+    // 2. Crear la entidad de Usuario base con rol de psicólogo
+    const salt = await require('bcrypt').genSalt(10);
+    const passwordHash = await require('bcrypt').hash(password, salt);
+
+    const nuevoUsuario = this.usuarioRepository.create({
+      nombre,
+      apellido,
+      email,
+      password: passwordHash,
+      rol: 'PSICOLOGO',
+      activo: true
+    });
+    const usuarioGuardado = await this.usuarioRepository.save(nuevoUsuario);
+
+    // 3. Crear el perfil profesional enlazado al usuario
+    const nuevoPerfil = this.psicologoRepository.create({
+      especialidad,
+      numColegiatura,
+      biografia: '',
+      usuario: usuarioGuardado
+    });
+
+    return await this.psicologoRepository.save(nuevoPerfil);
+  }
 }
