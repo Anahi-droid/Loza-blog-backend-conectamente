@@ -22,4 +22,9 @@ export class AdminService {
     await this.usuariosService.desactivar(id);
     return { mensaje: `Usuario ${id} desactivado correctamente` };
   }
+
+  async reactivar(id: string): Promise<{ mensaje: string }> {
+    await this.usuariosService.activar(id);
+    return { mensaje: `Usuario ${id} reactivado correctamente` };
+  }
 }

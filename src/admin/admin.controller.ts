@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Patch,
   HttpCode,
   HttpStatus,
   Param,
@@ -52,5 +53,13 @@ export class AdminController {
   @Delete(':id')
   async darDeBaja(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.darDeBaja(id);
+  }
+
+  @ApiOperation({ summary: 'Reactivar usuario — setea activo=true' })
+  @ApiResponse({ status: 200, description: 'Usuario reactivado correctamente' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @Patch(':id/reactivar')
+  async reactivarUsuario(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.reactivar(id);
   }
 }

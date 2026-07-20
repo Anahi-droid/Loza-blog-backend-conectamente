@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Psicologo } from '../psicologos/psicologo.entity';
 import { Usuario } from '../usuarios/usuario.entity';
+import { Especialidad } from '../especialidades/especialidade.entity';
+import { CreatePsicologoDto } from './dto/create-psicologo.dto';
 
 @Injectable()
 export class PsicologosService {
@@ -11,6 +13,8 @@ export class PsicologosService {
     private psicologoRepository: Repository<Psicologo>,
     @InjectRepository(Usuario)
     private usuarioRepository: Repository<Usuario>,
+    @InjectRepository(Especialidad)
+    private especialidadRepository: Repository<Especialidad>,
   ) {}
 
   async crearPerfil(usuarioId: string, datosProf: Partial<Psicologo>): Promise<Psicologo> {
@@ -31,21 +35,37 @@ export class PsicologosService {
   async listarTodos(): Promise<Psicologo[]> {
     // Trae los perfiles médicos cuyo usuario asociado permanezca ACTIVO en el sistema
     return await this.psicologoRepository.find({
-      relations: { usuario: true },
+      relations: { usuario: true, especialidades: true },
       where: { usuario: { activo: true } }
     });
   }
 
-  async actualizar(usuarioId: string, camposActualizar: Partial<Psicologo>): Promise<Psicologo> {
+  async actualizar(usuarioId: string, camposActualizar: any): Promise<Psicologo> {
     const psicologo = await this.psicologoRepository.findOne({ 
-      where: { usuario: { id: usuarioId } } 
+      where: { usuario: { id: usuarioId } },
+      relations: { especialidades: true }
     });
 
     if (!psicologo) {
       throw new NotFoundException(`Perfil de psicólogo para el usuario con ID ${usuarioId} no encontrado.`);
     }
 
-    Object.assign(psicologo, camposActualizar);
+    const { especialidadesIds, registroProfesional, ...restoCampos } = camposActualizar;
+
+    // Si vienen IDs de especialidades desde el front, actualizamos la tabla intermedia ManyToMany
+    if (especialidadesIds && Array.isArray(especialidadesIds)) {
+      const especialidadesEncontradas = await this.especialidadRepository.find({
+        where: { id: In(especialidadesIds) }
+      });
+      psicologo.especialidades = especialidadesEncontradas;
+    }
+
+    // Mapeamos los campos planos correspondientes del payload
+    if (registroProfesional) {
+      psicologo.numColegiatura = registroProfesional;
+    }
+
+    Object.assign(psicologo, restoCampos);
     return await this.psicologoRepository.save(psicologo);
   }
 
@@ -62,10 +82,9 @@ export class PsicologosService {
     await this.usuarioRepository.save(usuario);
   }
 
-
-  // 🎯 NUEVO MÉTODO: Maneja la creación en cascada de Usuario y Perfil Médico
-  async crearPerfilUnificado(payload: any): Promise<Psicologo> {
-    const { nombre, apellido, email, password, especialidad, numColegiatura, telefono } = payload;
+  // 🎯 NUEVO MÉTODO: Maneja la creación en cascada de Usuario, Perfil Médico y especialidades ManyToMany
+  async crearPerfilUnificado(payload: CreatePsicologoDto): Promise<Psicologo> {
+    const { nombre, apellido, email, password, especialidadesIds, licenciaProfesional, telefono } = payload;
 
     // 1. Verificar si el email ya existe
     const existeUsuario = await this.usuarioRepository.findOne({ where: { email } });
@@ -73,7 +92,15 @@ export class PsicologosService {
       throw new Error(`El correo ${email} ya está registrado en la plataforma.`);
     }
 
-    // 2. Crear la entidad de Usuario base con rol de psicólogo
+    // 2. Buscar las entidades de especialidad que correspondan a los IDs recibidos
+    let especialidadesEncontradas: Especialidad[] = [];
+    if (especialidadesIds && especialidadesIds.length > 0) {
+      especialidadesEncontradas = await this.especialidadRepository.find({
+        where: { id: In(especialidadesIds) }
+      });
+    }
+
+    // 3. Crear la entidad de Usuario base con rol de psicólogo
     const salt = await require('bcrypt').genSalt(10);
     const passwordHash = await require('bcrypt').hash(password, salt);
 
@@ -87,12 +114,12 @@ export class PsicologosService {
     });
     const usuarioGuardado = await this.usuarioRepository.save(nuevoUsuario);
 
-    // 3. Crear el perfil profesional enlazado al usuario
+    // 4. Crear el perfil profesional enlazado al usuario y a sus especialidades maestras
     const nuevoPerfil = this.psicologoRepository.create({
-      especialidad,
-      numColegiatura,
-      biografia: '',
-      usuario: usuarioGuardado
+      numColegiatura: licenciaProfesional,
+      biografia: telefono || '',
+      usuario: usuarioGuardado,
+      especialidades: especialidadesEncontradas 
     });
 
     return await this.psicologoRepository.save(nuevoPerfil);
