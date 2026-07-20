@@ -58,4 +58,35 @@ export class ProgresoService {
     await this.progresoRepository.remove(progreso);
     return { message: `Progreso con ID ${id} eliminado exitosamente` };
   }
+
+  async obtenerMetricasGenerales(): Promise<any> {
+    const totalProgresos = await this.progresoRepository.count();
+    
+    const progresosUltimos30Dias = await this.progresoRepository
+      .createQueryBuilder('progreso')
+      .where('progreso.fecha >= :fecha', { fecha: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) })
+      .getCount();
+
+    const porEstadoEmocional = await this.progresoRepository
+      .createQueryBuilder('progreso')
+      .select('progreso.estadoEmocional', 'estado')
+      .addSelect('COUNT(*)', 'cantidad')
+      .groupBy('progreso.estadoEmocional')
+      .orderBy('cantidad', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    const ultimosProgresos = await this.progresoRepository.find({
+      relations: { historial: true },
+      order: { fecha: 'DESC' },
+      take: 10,
+    });
+
+    return {
+      totalProgresos,
+      progresosUltimos30Dias,
+      porEstadoEmocional,
+      ultimosProgresos,
+    };
+  }
 }

@@ -60,4 +60,48 @@ export class EncuestasService {
   async obtenerRespuestasPorEncuesta(encuestaId: string): Promise<Respuesta[]> {
     return await this.respuestaModel.find({ encuestaId }).exec();
   }
+
+  async obtenerMetricasGenerales(): Promise<any> {
+    const totalEncuestas = await this.encuestaModel.countDocuments().exec();
+    
+    const totalRespuestas = await this.respuestaModel.countDocuments().exec();
+
+    const respuestasPorEncuesta = await this.respuestaModel
+      .aggregate([
+        {
+          $group: {
+            _id: '$encuestaId',
+            cantidad: { $sum: 1 }
+          }
+        },
+        {
+          $lookup: {
+            from: 'encuestas',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'encuesta'
+          }
+        },
+        {
+          $unwind: '$encuesta'
+        },
+        {
+          $project: {
+            encuestaId: '$_id',
+            encuestaTitulo: '$encuesta.titulo',
+            cantidad: 1
+          }
+        },
+        {
+          $sort: { cantidad: -1 }
+        }
+      ])
+      .exec();
+
+    return {
+      totalEncuestas,
+      totalRespuestas,
+      respuestasPorEncuesta,
+    };
+  }
 }
