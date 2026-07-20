@@ -18,6 +18,8 @@ import { PsicologosModule } from './psicologos/psicologos.module';
 import { AgendaModule } from './agenda/agenda.module';
 import { EspecialidadesModule } from './especialidades/especialidades.module'
 import { CitasModule } from './citas/citas.module'; 
+import { SolicitudesModule } from './solicitudes/solicitudes.module'; // 🎯 1. IMPORTAR EL NUEVO MÓDULO
+
 import { Usuario } from './usuarios/usuario.entity';
 import { Psicologo } from './psicologos/psicologo.entity';
 import { Cita } from './citas/cita.entity';
@@ -33,6 +35,7 @@ import { Diagnostico } from './historial/diagnostico.entity';
 import { Tratamiento } from './historial/tratamiento.entity';
 import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
 import { Paciente } from './pacientes/paciente.entity';
+import { SolicitudVinculacion } from './solicitudes/solicitud-vinculacion.entity'; // 🎯 2. IMPORTAR LA NUEVA ENTIDAD
 
 @Module({
   imports: [
@@ -65,7 +68,8 @@ import { Paciente } from './pacientes/paciente.entity';
           Diagnostico,
           Tratamiento,
           HorarioTrabajo,
-          Paciente
+          Paciente,
+          SolicitudVinculacion // 👈 🎯 3. AGREGADA AQUÍ PARA QUE TYPEORM CREE LA TABLA EN POSTGRES
         ], 
         synchronize: config.get<string>('NODE_ENV') !== 'production',
       }),
@@ -95,6 +99,7 @@ import { Paciente } from './pacientes/paciente.entity';
     AgendaModule,
     CitasModule,
     EspecialidadesModule,
+    SolicitudesModule, // 👈 🎯 4. REGISTRADO AQUÍ PARA LEVANTAR LOS ENDPOINTS
   ],
 })
 export class AppModule {}

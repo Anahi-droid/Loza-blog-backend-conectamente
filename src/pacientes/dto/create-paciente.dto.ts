@@ -1,7 +1,6 @@
 import { IsDateString, IsEmail, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 
 export class CreatePacienteDto {
-  // 🚀 CAMPOS DE USUARIO BASE (Declarados para que NestJS no los rechace ni limpie)
   @IsString()
   @Length(2, 100)
   nombre: string;
@@ -17,7 +16,6 @@ export class CreatePacienteDto {
   @IsUUID()
   usuarioId?: string; 
 
-  // 🚀 Volvemos a IsDateString de forma segura
   @IsDateString({}, { message: 'La fecha de nacimiento debe ser una fecha válida' })
   fechaNacimiento: string;
 
@@ -53,4 +51,13 @@ export class CreatePacienteDto {
   @IsOptional()
   @IsString()
   motivoConsultaInicial?: string;
+
+  // 🎯 NUEVOS CAMPOS: Para auditoría y enlace relacional atómico
+  @IsOptional()
+  @IsString()
+  creadorId?: string;
+
+  @IsOptional()
+  @IsString()
+  creadorRol?: string;
 }
