@@ -104,4 +104,8 @@ export class EncuestasService {
       respuestasPorEncuesta,
     };
   }
+
+  async obtenerMisRespuestas(usuarioId: string): Promise<Respuesta[]> {
+    return await this.respuestaModel.find({ usuarioId }).exec();
+  }
 }
