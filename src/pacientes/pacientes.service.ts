@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Paciente } from './paciente.entity';
 import { Usuario } from '../usuarios/usuario.entity';
@@ -22,9 +22,9 @@ export class PacientesService {
     return bcrypt.hash(password, this.SALT_ROUNDS);
   }
 
-// 🚀 CREACIÓN UNIFICADA EN UN SOLO PASO
-  async create(createPacienteDto: CreatePacienteDto): Promise<Paciente> {
-    const { nombre, apellido, email, fechaNacimiento, ...datosPaciente } = createPacienteDto;
+  // 🚀 CREACIÓN UNIFICADA EN UN SOLO PASO (CORREGIDA CON RELACIÓN DE PSICÓLOGO)
+  async create(payload: any): Promise<Paciente> {
+    const { nombre, apellido, email, fechaNacimiento, creadorId, creadorRol, ...datosPaciente } = payload;
 
     // 1. Verificar si el correo ya está registrado en la base de datos
     const existeUsuario = await this.usuarioRepository.findOne({ where: { email } });
@@ -43,11 +43,13 @@ export class PacientesService {
     });
     const usuarioGuardado = await this.usuarioRepository.save(nuevoUsuario) as Usuario;
 
-    // 3. Crear el expediente clínico del Paciente
+    // 3. Crear el expediente clínico del Paciente asignando su psicólogo si es el creador
     const nuevoPaciente = this.pacienteRepository.create({
       ...datosPaciente,
-      fechaNacimiento: new Date(fechaNacimiento), // Mapeado correctamente a tipo Date
+      fechaNacimiento: new Date(fechaNacimiento),
       usuario: usuarioGuardado,
+      // Si el que lo registra es un PSICOLOGO, asociamos su perfil médico como dueño directo
+      psicologo: creadorRol === 'PSICOLOGO' ? { id: creadorId } : null
     });
     
     const pacienteGuardado = await this.pacienteRepository.save(nuevoPaciente) as Paciente;
@@ -55,7 +57,7 @@ export class PacientesService {
     // 4. Retornar el paciente completo con la relación de usuario cargada
     const pacienteCompleto = await this.pacienteRepository.findOne({
       where: { id: pacienteGuardado.id },
-      relations: { usuario: true }
+      relations: { usuario: true, psicologo: true }
     });
 
     return pacienteCompleto || pacienteGuardado;
@@ -69,6 +71,7 @@ export class PacientesService {
         citas: true,
         historiales: true,
         recomendaciones: true,
+        psicologo: true
       },
     });
 
@@ -88,7 +91,6 @@ export class PacientesService {
     
     const paciente = await this.findOne(id);
 
-    // Si se envían cambios del usuario vinculado, los actualizamos de una vez
     if (paciente.usuario && (nombre || apellido)) {
       if (nombre) paciente.usuario.nombre = nombre.trim();
       if (apellido) paciente.usuario.apellido = apellido.trim();
@@ -102,8 +104,6 @@ export class PacientesService {
   async remove(id: string): Promise<{ deleted: boolean }> {
     const paciente = await this.findOne(id);
     
-    // Desactivamos el usuario en lugar de borrar físicamente si prefieres borrado lógico, 
-    // o hacemos CASCADE si borramos el expediente clínico directamente.
     if (paciente.usuario) {
       paciente.usuario.activo = false;
       await this.usuarioRepository.save(paciente.usuario);
@@ -113,26 +113,30 @@ export class PacientesService {
     return { deleted: true };
   }
 
-  // 🎯 CORREGIDO: Filtra dinámicamente según las reglas de negocio y roles del sistema
+  // 🎯 CORREGIDO: Filtra de manera estricta y hermética según el Rol
   async findAll(usuarioLogueado: { id: string; rol: string }): Promise<Paciente[]> {
     // 👑 REGLA ADMIN: Si es administrador, ve absolutamente todos los expedientes activos
     if (usuarioLogueado.rol === 'ADMIN') {
       return await this.pacienteRepository.find({
         where: { usuario: { activo: true } },
-        relations: { usuario: true },
+        relations: { usuario: true, psicologo: true },
         order: { creadoEn: 'DESC' }
       });
     }
 
-    // 🩺 REGLA PSICÓLOGO: Puede ver todos los pacientes activos para poder agendar citas
+    // 🩺 REGLA PSICÓLOGO BLINDADA: Solo puede ver los pacientes vinculados a su ID médico
+    // Buscamos usando el QueryBuilder o relaciones de TypeORM cruzando por usuario.id del psicólogo
     return await this.pacienteRepository.find({
-      where: { usuario: { activo: true } },
+      where: { 
+        usuario: { activo: true },
+        psicologo: { usuario: { id: usuarioLogueado.id } } // Filtro relacional estricto
+      },
       relations: { usuario: true },
       order: { creadoEn: 'DESC' }
     });
   }
 
-  // 🚀 AGREGA ESTE MÉTODO AL FINAL DE LA CLASE:
+  // 🚀 SE MANTIENE EL MÉTODO GLOBAL EXCLUSIVO PARA LOS MODALES DE CITAS GENERALES
   async obtenerTodosActivos(): Promise<Paciente[]> {
     return await this.pacienteRepository.find({
       where: { usuario: { activo: true } },
