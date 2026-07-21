@@ -71,6 +71,11 @@ export class TestsPsicometricosService {
     if (!asignacion) throw new NotFoundException('Asignación no encontrada');
     if (asignacion.pacienteId !== pacienteId) throw new ForbiddenException('No tienes permisos');
     if (asignacion.estado !== 'ACTIVO') throw new ForbiddenException('El test no está activo');
+    
+    // Límite de 1 intento por test
+    if (asignacion.intentos.length >= 1) {
+      throw new ForbiddenException('Ya has completado este test. Solo se permite un intento.');
+    }
 
     const nuevoIntento = {
       fecha: new Date(),

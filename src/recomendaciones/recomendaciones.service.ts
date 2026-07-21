@@ -46,15 +46,12 @@ export class RecomendacionesService {
     }
 
     if (rol === 'PSICOLOGO') {
-      // El psicólogo ve las recomendaciones de sus pacientes
-      // Buscamos recomendaciones donde el paciente tenga como psicólogo a este usuario
+      // El psicólogo ve las recomendaciones que él mismo ha creado
       return await this.recomendacionRepository
         .createQueryBuilder('recomendacion')
         .leftJoinAndSelect('recomendacion.paciente', 'paciente')
         .leftJoinAndSelect('recomendacion.psicologo', 'psicologo')
-        .leftJoinAndSelect('paciente.psicologo', 'psicologoPaciente')
-        .leftJoinAndSelect('psicologoPaciente.usuario', 'usuarioPsicologo')
-        .where('usuarioPsicologo.id = :usuarioId', { usuarioId })
+        .where('recomendacion.psicologo_id = :psicologoId', { psicologoId: usuarioId })
         .getMany();
     }
 
