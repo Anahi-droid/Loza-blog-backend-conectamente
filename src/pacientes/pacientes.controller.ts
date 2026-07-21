@@ -44,6 +44,12 @@ export class PacientesController {
     return this.pacientesService.obtenerTodosActivos();
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('me/perfil')
+  obtenerMiExpediente(@Req() req) {
+    return this.pacientesService.findByUsuarioId(req.user.id);
+}
+
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.pacientesService.findOne(id);

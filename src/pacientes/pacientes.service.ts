@@ -86,6 +86,29 @@ export class PacientesService {
     return paciente;
   }
 
+  async findByUsuarioId(usuarioId: string): Promise<Paciente> {
+  const paciente = await this.pacienteRepository.findOne({
+    where: { usuario: { id: usuarioId, activo: true } },
+    relations: {
+      usuario: true,
+      citas: true,
+      historiales: true,
+      recomendaciones: true,
+      psicologo: true,
+    },
+  });
+
+  if (!paciente) {
+    throw new NotFoundException('No se encontró un expediente de paciente para este usuario');
+  }
+
+  if (paciente.usuario) {
+    delete paciente.usuario.password;
+  }
+
+  return paciente;
+}
+
   async update(id: string, updatePacienteDto: UpdatePacienteDto & { nombre?: string; apellido?: string }): Promise<Paciente> {
     const { nombre, apellido, ...datosAActualizar } = updatePacienteDto as any;
     
@@ -123,6 +146,7 @@ export class PacientesService {
         order: { creadoEn: 'DESC' }
       });
     }
+
 
     // 🩺 REGLA PSICÓLOGO BLINDADA: Solo puede ver los pacientes vinculados a su ID médico
     // Buscamos usando el QueryBuilder o relaciones de TypeORM cruzando por usuario.id del psicólogo
