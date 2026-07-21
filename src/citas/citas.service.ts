@@ -32,8 +32,12 @@ export class CitasService {
         order: { fechaHora: 'DESC' }
       });
     } else if (rol === 'PSICOLOGO') {
+      // 🎯 BUSCADOR DOBLE SEGURO: Busca por la relación con usuario.id o directamente psicologo.id
       citas = await this.citaRepository.find({
-        where: { psicologo: { usuario: { id: usuarioId } } },
+        where: [
+          { psicologo: { usuario: { id: usuarioId } } },
+          { psicologo: { id: usuarioId } }
+        ],
         relations: { paciente: true, psicologo: { usuario: true } },
         order: { fechaHora: 'DESC' }
       });
@@ -45,7 +49,6 @@ export class CitasService {
       });
     }
 
-    // 🎯 Mapeo seguro: Buscamos el pago correspondiente en la base de datos para cada cita
     const citasConPagos = await Promise.all(
       citas.map(async (cita) => {
         const pagoAsociado = await this.pagoRepository.findOne({
@@ -53,7 +56,7 @@ export class CitasService {
         });
         return {
           ...cita,
-          pago: pagoAsociado || null // Se le adjunta al objeto final para que el frontend lo pinte limpio
+          pago: pagoAsociado || null
         };
       })
     );
@@ -61,7 +64,7 @@ export class CitasService {
     return citasConPagos;
   }
 
-  async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<Cita> {
+  async agendarCita(pacienteId: string, agendaId: string, motivo: string): Promise<any> {
     const agenda = await this.agendaRepository.findOne({
       where: { id: agendaId },
       relations: { psicologo: true },
@@ -78,6 +81,7 @@ export class CitasService {
     agenda.estaReservado = true;
     await this.agendaRepository.save(agenda);
 
+    // 1. Crear la cita
     const nuevaCita = this.citaRepository.create({
       fechaHora: agenda.fechaHoraInicio,
       motivoConsulta: motivo,
@@ -87,12 +91,13 @@ export class CitasService {
 
     const citaGuardada = await this.citaRepository.save(nuevaCita);
 
+    // 2. Crear registros dependientes
     const nuevoPago = this.pagoRepository.create({
       monto: 30.00, 
       estado: 'PENDIENTE',
       cita: citaGuardada,
     });
-    await this.pagoRepository.save(nuevoPago);
+    const pagoGuardado = await this.pagoRepository.save(nuevoPago);
 
     const nuevaSesion = this.sesionRepository.create({
       motivoEvolucion: motivo,
@@ -100,7 +105,17 @@ export class CitasService {
     });
     await this.sesionRepository.save(nuevaSesion);
 
-    return citaGuardada;
+    // 🎯 3. CLAVE DE LA VICTORIA: Volver a consultar la cita recién creada 
+    // trayendo exactamente el mismo formato relacional que 'obtenerCitas'
+    const citaCompleta = await this.citaRepository.findOne({
+      where: { id: citaGuardada.id },
+      relations: { paciente: true, psicologo: { usuario: true } }
+    });
+
+    return {
+      ...citaCompleta,
+      pago: pagoGuardado || null
+    };
   }
 
   async obtenerCitaPorId(id: string, usuarioId: string, rol: string): Promise<Cita> {
@@ -132,12 +147,21 @@ export class CitasService {
     estado?: EstadoCita, 
     notasMedicas?: string
   ): Promise<Cita> {
-    const cita = await this.obtenerCitaPorId(id, usuarioId, rol);
+    // 🛡️ 1. Verificar si la cita existe y los permisos de acceso
+    const citaExistente = await this.obtenerCitaPorId(id, usuarioId, rol);
 
-    if (estado) cita.estado = estado;
-    if (notasMedicas) cita.notasNotasMedicas = notasMedicas;
+    // 🛡️ 2. Construir objeto de campos a actualizar
+    const camposAActualizar: Partial<Cita> = {};
+    if (estado) camposAActualizar.estado = estado;
+    if (notasMedicas !== undefined) camposAActualizar.notasNotasMedicas = notasMedicas;
 
-    return await this.citaRepository.save(cita);
+    // 🛡️ 3. Ejecutar UPDATE atómico directo en la tabla 'citas'
+    if (Object.keys(camposAActualizar).length > 0) {
+      await this.citaRepository.update(id, camposAActualizar);
+    }
+
+    // 🛡️ 4. Retornar la cita actualizada con sus relaciones frescas
+    return await this.obtenerCitaPorId(id, usuarioId, rol);
   }
 
   async eliminarCita(id: string, usuarioId: string, rol: string): Promise<void> {
@@ -154,6 +178,7 @@ export class CitasService {
       throw new ForbiddenException('No puedes cancelar una cita que no te pertenece.');
     }
 
+    // 1. Liberar el espacio en la agenda del psicólogo
     if (cita.psicologo) {
       const agenda = await this.agendaRepository.findOne({
         where: { 
@@ -167,6 +192,11 @@ export class CitasService {
       }
     }
 
+    // 🛡️ 2. ELIMINAR REGISTROS HIJOS EN 'PAGOS' Y 'SESIONES' PARA EVITAR EL ERROR 500
+    await this.pagoRepository.delete({ cita: { id: cita.id } });
+    await this.sesionRepository.delete({ cita: { id: cita.id } });
+
+    // 3. Eliminar la cita limpia de PostgreSQL
     await this.citaRepository.remove(cita);
   }
 

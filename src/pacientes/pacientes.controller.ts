@@ -49,6 +49,13 @@ export class PacientesController {
     return this.pacientesService.findOne(id);
   }
 
+  // 🎯 RUTA PROPIA DEL PACIENTE: Consulta su expediente personal desde su Token JWT
+  @UseGuards(JwtAuthGuard)
+  @Get('me/perfil')
+  obtenerMiPerfil(@Req() req) {
+    return this.pacientesService.obtenerPerfilPorUsuarioId(req.user.id);
+  }
+
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string, 

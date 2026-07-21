@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Paciente } from './paciente.entity';
 import { Usuario } from '../usuarios/usuario.entity';
@@ -22,18 +22,15 @@ export class PacientesService {
     return bcrypt.hash(password, this.SALT_ROUNDS);
   }
 
-  // 🚀 CREACIÓN UNIFICADA EN UN SOLO PASO (CORREGIDA CON RELACIÓN DE PSICÓLOGO)
   async create(payload: any): Promise<Paciente> {
     const { nombre, apellido, email, fechaNacimiento, creadorId, creadorRol, ...datosPaciente } = payload;
 
-    // 1. Verificar si el correo ya está registrado en la base de datos
     const existeUsuario = await this.usuarioRepository.findOne({ where: { email } });
     if (existeUsuario) {
       throw new ConflictException(`Ya existe un usuario registrado con el correo ${email}`);
     }
 
-    // 2. Crear la cuenta de Usuario base con rol PACIENTE
-    const passwordHash = await this.hashPassword('Paciente123*'); // Contraseña temporal
+    const passwordHash = await this.hashPassword('Paciente123*');
     const nuevoUsuario = this.usuarioRepository.create({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
@@ -43,21 +40,21 @@ export class PacientesService {
     });
     const usuarioGuardado = await this.usuarioRepository.save(nuevoUsuario) as Usuario;
 
-    // 3. Crear el expediente clínico del Paciente asignando su psicólogo si es el creador
     const nuevoPaciente = this.pacienteRepository.create({
       ...datosPaciente,
       fechaNacimiento: new Date(fechaNacimiento),
       usuario: usuarioGuardado,
-      // Si el que lo registra es un PSICOLOGO, asociamos su perfil médico como dueño directo
       psicologo: creadorRol === 'PSICOLOGO' ? { id: creadorId } : null
     });
     
     const pacienteGuardado = await this.pacienteRepository.save(nuevoPaciente) as Paciente;
 
-    // 4. Retornar el paciente completo con la relación de usuario cargada
     const pacienteCompleto = await this.pacienteRepository.findOne({
       where: { id: pacienteGuardado.id },
-      relations: { usuario: true, psicologo: true }
+      relations: { 
+        usuario: true, 
+        psicologo: { usuario: true } 
+      }
     });
 
     return pacienteCompleto || pacienteGuardado;
@@ -71,7 +68,7 @@ export class PacientesService {
         citas: true,
         historiales: true,
         recomendaciones: true,
-        psicologo: true
+        psicologo: { usuario: true }
       },
     });
 
@@ -113,35 +110,59 @@ export class PacientesService {
     return { deleted: true };
   }
 
-  // 🎯 CORREGIDO: Filtra de manera estricta y hermética según el Rol
+  // 🎯 Carga limpia con la sub-relación 'psicologo.usuario' para que traiga Nombres y Apellidos
   async findAll(usuarioLogueado: { id: string; rol: string }): Promise<Paciente[]> {
-    // 👑 REGLA ADMIN: Si es administrador, ve absolutamente todos los expedientes activos
     if (usuarioLogueado.rol === 'ADMIN') {
       return await this.pacienteRepository.find({
         where: { usuario: { activo: true } },
-        relations: { usuario: true, psicologo: true },
+        relations: { 
+          usuario: true, 
+          psicologo: { usuario: true } 
+        },
         order: { creadoEn: 'DESC' }
       });
     }
 
-    // 🩺 REGLA PSICÓLOGO BLINDADA: Solo puede ver los pacientes vinculados a su ID médico
-    // Buscamos usando el QueryBuilder o relaciones de TypeORM cruzando por usuario.id del psicólogo
     return await this.pacienteRepository.find({
       where: { 
         usuario: { activo: true },
-        psicologo: { usuario: { id: usuarioLogueado.id } } // Filtro relacional estricto
+        psicologo: { usuario: { id: usuarioLogueado.id } }
       },
-      relations: { usuario: true },
+      relations: { 
+        usuario: true, 
+        psicologo: { usuario: true } 
+      },
       order: { creadoEn: 'DESC' }
     });
   }
 
-  // 🚀 SE MANTIENE EL MÉTODO GLOBAL EXCLUSIVO PARA LOS MODALES DE CITAS GENERALES
   async obtenerTodosActivos(): Promise<Paciente[]> {
     return await this.pacienteRepository.find({
       where: { usuario: { activo: true } },
-      relations: { usuario: true },
+      relations: { usuario: true, psicologo: { usuario: true } },
       order: { creadoEn: 'DESC' }
     });
+  }
+
+  // 🎯 Busca el expediente del paciente a través de su usuario_id (del token JWT)
+  async obtenerPerfilPorUsuarioId(usuarioId: string): Promise<Paciente> {
+    const paciente = await this.pacienteRepository.findOne({
+      where: { usuario: { id: usuarioId, activo: true } },
+      relations: {
+        usuario: true,
+        psicologo: { usuario: true },
+        citas: true,
+      },
+    });
+
+    if (!paciente) {
+      throw new NotFoundException('Aún no tienes un expediente clínico creado.');
+    }
+
+    if (paciente.usuario) {
+      delete paciente.usuario.password;
+    }
+
+    return paciente;
   }
 }

@@ -165,4 +165,114 @@ export class AgendasService {
     if (excepcion.psicologo.id !== psicologoId) throw new ForbiddenException('No tienes permiso para eliminar esta excepción.');
     await this.excepcionRepository.remove(excepcion);
   }
+
+  private async obtenerPsicologoPorUsuarioId(usuarioId: string) {
+    const agenda = await this.agendaRepository.manager.getRepository('Psicologo').findOne({
+      where: { usuario: { id: usuarioId } }
+    });
+    if (!agenda) {
+      throw new NotFoundException('No se encontró el perfil profesional de psicólogo asociado a tu usuario.');
+    }
+    return agenda;
+  }
+
+  async listarAgendasPorRol(usuarioId: string, rol: string): Promise<Agenda[]> {
+    if (rol === 'ADMIN') {
+      return await this.agendaRepository.find({
+        relations: { psicologo: { usuario: true } },
+        order: { fechaHoraInicio: 'DESC' }
+      });
+    }
+
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return await this.agendaRepository.find({
+      where: { psicologo: { id: psicologo.id } },
+      relations: { psicologo: { usuario: true } },
+      order: { fechaHoraInicio: 'DESC' }
+    });
+  }
+
+  async crearDisponibilidadPorUsuarioId(usuarioId: string, fechaHora: Date): Promise<Agenda> {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    await this.verificarExcepcion(psicologo.id, fechaHora);
+    
+    const nueva = this.agendaRepository.create({
+      fechaHoraInicio: fechaHora,
+      estaReservado: false,
+      psicologo: { id: psicologo.id }
+    });
+    return this.agendaRepository.save(nueva);
+  }
+
+  async actualizarDisponibilidadPorUsuarioId(agendaId: string, usuarioId: string, nuevaFecha?: Date, estaReservado?: boolean) {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return this.actualizarDisponibilidad(agendaId, psicologo.id, nuevaFecha, estaReservado);
+  }
+
+  async eliminarDisponibilidadPorUsuarioId(agendaId: string, usuarioId: string): Promise<void> {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return this.eliminarDisponibilidad(agendaId, psicologo.id);
+  }
+
+  async listarHorariosTrabajoPorRol(usuarioId: string, rol: string): Promise<HorarioTrabajo[]> {
+    if (rol === 'ADMIN') {
+      return await this.horarioRepository.find({
+        relations: { psicologo: { usuario: true } },
+        order: { diaSemana: 'ASC', horaApertura: 'ASC' }
+      });
+    }
+
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return await this.horarioRepository.find({
+      where: { psicologo: { id: psicologo.id } },
+      relations: { psicologo: { usuario: true } },
+      order: { diaSemana: 'ASC', horaApertura: 'ASC' }
+    });
+  }
+
+  async guardarHorarioTrabajoPorUsuarioId(usuarioId: string, dia: number, apertura: string, cierre: string): Promise<HorarioTrabajo> {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return this.guardarHorarioTrabajo(psicologo.id, dia, apertura, cierre);
+  }
+
+  async actualizarHorarioTrabajoPorUsuarioId(id: string, usuarioId: string, dia?: number, apertura?: string, cierre?: string): Promise<HorarioTrabajo> {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return this.actualizarHorarioTrabajo(id, psicologo.id, dia, apertura, cierre);
+  }
+
+  async eliminarHorarioTrabajoPorUsuarioId(id: string, usuarioId: string): Promise<void> {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return this.eliminarHorarioTrabajo(id, psicologo.id);
+  }
+
+  async listarExcepcionesPorRol(usuarioId: string, rol: string): Promise<DisponibilidadExcepcion[]> {
+    if (rol === 'ADMIN') {
+      return await this.excepcionRepository.find({
+        relations: { psicologo: { usuario: true } },
+        order: { fechaInicio: 'DESC' }
+      });
+    }
+
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return await this.excepcionRepository.find({
+      where: { psicologo: { id: psicologo.id } },
+      relations: { psicologo: { usuario: true } },
+      order: { fechaInicio: 'DESC' }
+    });
+  }
+
+  async guardarExcepcionPorUsuarioId(usuarioId: string, inicio: Date, fin: Date, motivo: string): Promise<DisponibilidadExcepcion> {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return this.guardarExcepcion(psicologo.id, inicio, fin, motivo);
+  }
+
+  async actualizarExcepcionPorUsuarioId(id: string, usuarioId: string, inicio?: Date, fin?: Date, motivo?: string): Promise<DisponibilidadExcepcion> {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return this.actualizarExcepcion(id, psicologo.id, inicio, fin, motivo);
+  }
+
+  async eliminarExcepcionPorUsuarioId(id: string, usuarioId: string): Promise<void> {
+    const psicologo = await this.obtenerPsicologoPorUsuarioId(usuarioId);
+    return this.eliminarExcepcion(id, psicologo.id);
+  }
 }

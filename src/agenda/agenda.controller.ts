@@ -17,32 +17,37 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('agendas')
 export class AgendasController {
   constructor(private readonly agendasService: AgendasService) {}
-  
 
+  @UseGuards(JwtAuthGuard)
   @Get('horarios-trabajo')
-  async obtenerTodosLosHorariosTrabajo() {
-    return this.agendasService.listarTodosLosHorariosTrabajo();
+  async obtenerTodosLosHorariosTrabajo(@Req() req) {
+    const usuarioId = req.user.id;
+    const rol = req.user.rol;
+    return this.agendasService.listarHorariosTrabajoPorRol(usuarioId, rol);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('disponibilidad-excepciones')
-  async obtenerTodasLasExcepciones() {
-    return this.agendasService.listarTodasLasExcepciones();
+  async obtenerTodasLasExcepciones(@Req() req) {
+    const usuarioId = req.user.id;
+    const rol = req.user.rol;
+    return this.agendasService.listarExcepcionesPorRol(usuarioId, rol);
   }
 
+  // 🎯 FILTRADO HERMÉTICO: Cada psicólogo ve solo sus propios bloques de agenda
+  @UseGuards(JwtAuthGuard)
   @Get()
-  async obtenerTodas() {
-    return this.agendasService.listarTodasLasAgendas();
+  async obtenerTodas(@Req() req) {
+    const usuarioId = req.user.id;
+    const rol = req.user.rol;
+    return this.agendasService.listarAgendasPorRol(usuarioId, rol);
   }
-
 
   @UseGuards(JwtAuthGuard)
   @Post()
   async crearHorario(@Req() req, @Body('fechaHoraInicio') fechaHoraInicio: string) {
-    const psicologoId = req.user.psicologoId || req.user.id;    
-    if (!psicologoId) {
-      throw new BadRequestException('El token no contiene un identificador válido.');
-    }
-    return this.agendasService.crearDisponibilidad(psicologoId, new Date(fechaHoraInicio));
+    const usuarioId = req.user.id;
+    return this.agendasService.crearDisponibilidadPorUsuarioId(usuarioId, new Date(fechaHoraInicio));
   }
 
   @Get('psicologo/:id')
@@ -53,7 +58,7 @@ export class AgendasController {
     return this.agendasService.obtenerDisponiblesPorPsicologo(id);
   }
 
-  @Get(':id') // 🚀 Bajado aquí: Ahora solo capturará UUIDs reales, no rutas de texto
+  @Get(':id')
   async obtenerPorId(@Param('id') id: string) {
     const agenda = await this.agendasService.buscarPorId(id);
     if (!agenda) {
@@ -70,18 +75,17 @@ export class AgendasController {
     @Body('fechaHoraInicio') nuevaFecha?: string,
     @Body('estaReservado') estaReservado?: boolean,
   ) {
-    const psicologoId = req.user.psicologoId || req.user.id;
-    return this.agendasService.actualizarDisponibilidad(agendaId, psicologoId, nuevaFecha ? new Date(nuevaFecha) : undefined, estaReservado);
+    const usuarioId = req.user.id;
+    return this.agendasService.actualizarDisponibilidadPorUsuarioId(agendaId, usuarioId, nuevaFecha ? new Date(nuevaFecha) : undefined, estaReservado);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async eliminarHorario(@Param('id') agendaId: string, @Req() req) {
-    const psicologoId = req.user.psicologoId || req.user.id;
-    await this.agendasService.eliminarDisponibilidad(agendaId, psicologoId);
+    const usuarioId = req.user.id;
+    await this.agendasService.eliminarDisponibilidadPorUsuarioId(agendaId, usuarioId);
     return { message: 'Bloque de disponibilidad eliminado correctamente.' };
   }
-
 
   @Get('horarios-trabajo/:id')
   async obtenerHorarioTrabajoPorId(@Param('id') id: string) {
@@ -98,8 +102,8 @@ export class AgendasController {
     @Body('horaApertura') horaApertura: string,
     @Body('horaCierre') horaCierre: string,
   ) {
-    const psicologoId = req.user.psicologoId || req.user.id;
-    return this.agendasService.guardarHorarioTrabajo(psicologoId, diaSemana, horaApertura, horaCierre);
+    const usuarioId = req.user.id;
+    return this.agendasService.guardarHorarioTrabajoPorUsuarioId(usuarioId, diaSemana, horaApertura, horaCierre);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -111,18 +115,17 @@ export class AgendasController {
     @Body('horaApertura') horaApertura?: string,
     @Body('horaCierre') horaCierre?: string,
   ) {
-    const psicologoId = req.user.psicologoId || req.user.id;
-    return this.agendasService.actualizarHorarioTrabajo(id, psicologoId, diaSemana, horaApertura, horaCierre);
+    const usuarioId = req.user.id;
+    return this.agendasService.actualizarHorarioTrabajoPorUsuarioId(id, usuarioId, diaSemana, horaApertura, horaCierre);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('horarios-trabajo/:id')
   async removerHorarioTrabajo(@Param('id') id: string, @Req() req) {
-    const psicologoId = req.user.psicologoId || req.user.id;
-    await this.agendasService.eliminarHorarioTrabajo(id, psicologoId);
+    const usuarioId = req.user.id;
+    await this.agendasService.eliminarHorarioTrabajoPorUsuarioId(id, usuarioId);
     return { message: 'Horario de trabajo base removido de forma exitosa.' };
   }
-
 
   @Get('disponibilidad-excepciones/:id')
   async obtenerExcepcionPorId(@Param('id') id: string) {
@@ -139,8 +142,8 @@ export class AgendasController {
     @Body('fechaFin') fechaFin: string,
     @Body('motivo') motivo: string,
   ) {
-    const psicologoId = req.user.psicologoId || req.user.id;
-    return this.agendasService.guardarExcepcion(psicologoId, new Date(fechaInicio), new Date(fechaFin), motivo);
+    const usuarioId = req.user.id;
+    return this.agendasService.guardarExcepcionPorUsuarioId(usuarioId, new Date(fechaInicio), new Date(fechaFin), motivo);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -152,10 +155,10 @@ export class AgendasController {
     @Body('fechaFin') fechaFin?: string,
     @Body('motivo') motivo?: string,
   ) {
-    const psicologoId = req.user.psicologoId || req.user.id;
-    return this.agendasService.actualizarExcepcion(
+    const usuarioId = req.user.id;
+    return this.agendasService.actualizarExcepcionPorUsuarioId(
       id, 
-      psicologoId, 
+      usuarioId, 
       fechaInicio ? new Date(fechaInicio) : undefined, 
       fechaFin ? new Date(fechaFin) : undefined, 
       motivo
@@ -165,8 +168,8 @@ export class AgendasController {
   @UseGuards(JwtAuthGuard)
   @Delete('disponibilidad-excepciones/:id')
   async removerExcepcion(@Param('id') id: string, @Req() req) {
-    const psicologoId = req.user.psicologoId || req.user.id;
-    await this.agendasService.eliminarExcepcion(id, psicologoId);
+    const usuarioId = req.user.id;
+    await this.agendasService.eliminarExcepcionPorUsuarioId(id, usuarioId);
     return { message: 'Excepción de disponibilidad eliminada correctamente.' };
   }
 }
