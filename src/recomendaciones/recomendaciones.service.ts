@@ -31,62 +31,56 @@ export class RecomendacionesService {
   }
 
   async findAll(usuarioId?: string, rol?: string): Promise<Recomendacion[]> {
-    // Si no se proporciona usuario, retornar todas (para admin o desarrollo)
+    // Si no se proporciona usuario, retornar todas (para admin)
     if (!usuarioId || !rol) {
       return await this.recomendacionRepository.find({
-        relations: { paciente: true, psicologo: true },
+        relations: { paciente: true, psicologo: { usuario: true } },
       });
     }
 
-    // Filtrar según el rol del usuario
     if (rol === 'ADMIN') {
       return await this.recomendacionRepository.find({
-        relations: { paciente: true, psicologo: true },
+        relations: { paciente: true, psicologo: { usuario: true } },
       });
     }
 
     if (rol === 'PSICOLOGO') {
-      // El psicólogo ve las recomendaciones que él mismo ha creado
       return await this.recomendacionRepository
         .createQueryBuilder('recomendacion')
         .leftJoinAndSelect('recomendacion.paciente', 'paciente')
         .leftJoinAndSelect('recomendacion.psicologo', 'psicologo')
+        .leftJoinAndSelect('psicologo.usuario', 'usuario')
         .where('recomendacion.psicologo_id = :psicologoId', { psicologoId: usuarioId })
         .getMany();
     }
 
     if (rol === 'PACIENTE') {
-      // El paciente ve solo sus propias recomendaciones
+      // 🎯 Carga limpia con la sub-relación psicologo.usuario para traer el nombre del profesional
       return await this.recomendacionRepository.find({
         where: { paciente: { id: usuarioId } },
-        relations: { paciente: true, psicologo: true },
+        relations: { paciente: true, psicologo: { usuario: true } },
       });
     }
 
-    // Por defecto, no retornar nada si el rol no es reconocido
     return [];
   }
 
   async findOne(id: string): Promise<Recomendacion> {
     const recomendacion = await this.recomendacionRepository.findOne({
       where: { id },
-      relations: { paciente: true, psicologo: true },
+      relations: { paciente: true, psicologo: { usuario: true } },
     });
     if (!recomendacion) throw new NotFoundException(`Recomendación con ID ${id} no encontrada`);
     return recomendacion;
   }
 
   async findByPaciente(pacienteId: string, usuarioId?: string, rol?: string): Promise<Recomendacion[]> {
-    // Validar que el usuario tenga permiso para ver las recomendaciones de este paciente
     if (usuarioId && rol) {
       if (rol === 'PACIENTE') {
-        // Un paciente solo puede ver sus propias recomendaciones
         if (pacienteId !== usuarioId) {
           throw new ForbiddenException('No tienes permiso para ver las recomendaciones de este paciente');
         }
       } else if (rol === 'PSICOLOGO') {
-        // Un psicólogo solo puede ver las recomendaciones de sus pacientes
-        // Verificamos que el paciente tenga asignado a este psicólogo
         const paciente = await this.pacienteRepository.findOne({
           where: { 
             id: pacienteId,
@@ -103,7 +97,7 @@ export class RecomendacionesService {
 
     return await this.recomendacionRepository.find({
       where: { paciente: { id: pacienteId } },
-      relations: { psicologo: true, paciente: true }, 
+      relations: { psicologo: { usuario: true }, paciente: true }, 
     });
   }
 
