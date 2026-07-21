@@ -24,10 +24,16 @@ export class SolicitudesService {
   }
 
   // 2. El psicólogo lista las solicitudes pendientes que le han llegado
+  // 2. El psicólogo lista las solicitudes pendientes que le han llegado
   async listarParaPsicologo(psicologoId: string) {
+    // 🛡️ VALIDACIÓN ANTI-CRASH: Si no hay id de psicólogo (ej. es un ADMIN), retorna arreglo vacío de inmediato
+    if (!psicologoId) {
+      return [];
+    }
+
     return await this.solicitudRepository.find({
       where: { psicologo: { id: psicologoId }, estado: 'PENDIENTE' },
-      relations: { paciente: true }, // 👈 🎯 CORREGIDO: Formato de objeto estricto
+      relations: { paciente: true },
     });
   }
 

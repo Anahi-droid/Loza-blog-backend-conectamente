@@ -16,9 +16,10 @@ import { TestsPsicometricosModule } from './tests-psicometricos/tests-psicometri
 import { PacientesModule } from './pacientes/pacientes.module';
 import { PsicologosModule } from './psicologos/psicologos.module';
 import { AgendaModule } from './agenda/agenda.module';
-import { EspecialidadesModule } from './especialidades/especialidades.module'
+import { EspecialidadesModule } from './especialidades/especialidades.module';
 import { CitasModule } from './citas/citas.module'; 
-import { SolicitudesModule } from './solicitudes/solicitudes.module'; // 🎯 1. IMPORTAR EL NUEVO MÓDULO
+import { SolicitudesModule } from './solicitudes/solicitudes.module';
+import { SolicitudesPsicologosModule } from './solicitudes-psicologos/solicitudes-psicologos.module'; // 🎯 1. IMPORTAR MÓDULO POSTULACIÓN PSICÓLOGOS
 
 import { Usuario } from './usuarios/usuario.entity';
 import { Psicologo } from './psicologos/psicologo.entity';
@@ -35,7 +36,8 @@ import { Diagnostico } from './historial/diagnostico.entity';
 import { Tratamiento } from './historial/tratamiento.entity';
 import { HorarioTrabajo } from './agenda/horario-trabajo.entity';
 import { Paciente } from './pacientes/paciente.entity';
-import { SolicitudVinculacion } from './solicitudes/solicitud-vinculacion.entity'; // 🎯 2. IMPORTAR LA NUEVA ENTIDAD
+import { SolicitudVinculacion } from './solicitudes/solicitud-vinculacion.entity';
+import { SolicitudPsicologo } from './solicitudes-psicologos/solicitud-psicologo.entity'; // 🎯 2. IMPORTAR ENTIDAD POSTULACIÓN PSICÓLOGOS
 
 @Module({
   imports: [
@@ -69,7 +71,8 @@ import { SolicitudVinculacion } from './solicitudes/solicitud-vinculacion.entity
           Tratamiento,
           HorarioTrabajo,
           Paciente,
-          SolicitudVinculacion // 👈 🎯 3. AGREGADA AQUÍ PARA QUE TYPEORM CREE LA TABLA EN POSTGRES
+          SolicitudVinculacion,
+          SolicitudPsicologo, // 👈 🎯 3. REGISTRADA AQUÍ PARA CREAR LA TABLA EN POSTGRES
         ], 
         synchronize: config.get<string>('NODE_ENV') !== 'production',
       }),
@@ -99,7 +102,8 @@ import { SolicitudVinculacion } from './solicitudes/solicitud-vinculacion.entity
     AgendaModule,
     CitasModule,
     EspecialidadesModule,
-    SolicitudesModule, // 👈 🎯 4. REGISTRADO AQUÍ PARA LEVANTAR LOS ENDPOINTS
+    SolicitudesModule,
+    SolicitudesPsicologosModule, // 👈 🎯 4. REGISTRADO AQUÍ PARA HABILITAR /solicitudes-psicologos
   ],
 })
 export class AppModule {}
