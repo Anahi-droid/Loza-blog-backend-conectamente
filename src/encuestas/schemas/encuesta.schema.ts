@@ -11,6 +11,9 @@ export class Encuesta {
   @Prop({ required: true })
   descripcion?: string;
 
+  @Prop({ required: true })
+  psicologoId?: string;
+
   @Prop([
     {
       pregunta: String,

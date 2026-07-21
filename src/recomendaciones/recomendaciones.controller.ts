@@ -3,6 +3,7 @@ import { RecomendacionesService } from './recomendaciones.service';
 import { CreateRecomendacionDto } from './dto/create-recomendacione.dto';
 import { UpdateRecomendacionDto } from './dto/update-recomendacione.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RecomendacionAccessGuard } from '../auth/recomendacion-access.guard';
 
 @Controller('recomendaciones')
 export class RecomendacionesController {
@@ -15,9 +16,12 @@ export class RecomendacionesController {
     return this.recomendacionesService.create(createRecomendacionDto, psicologoId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
-  findAll() {
-    return this.recomendacionesService.findAll();
+  findAll(@Req() req) {
+    const usuarioId = req.user.id;
+    const rol = req.user.rol;
+    return this.recomendacionesService.findAll(usuarioId, rol);
   }
 
   @Get('progresos/todos')
@@ -25,17 +29,21 @@ export class RecomendacionesController {
     return this.recomendacionesService.findAllProgresos();
   }
 
+  @UseGuards(JwtAuthGuard, RecomendacionAccessGuard)
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.recomendacionesService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('paciente/:id')
-  findByPaciente(@Param('id', ParseUUIDPipe) id: string) {
-    return this.recomendacionesService.findByPaciente(id);
+  findByPaciente(@Param('id', ParseUUIDPipe) id: string, @Req() req) {
+    const usuarioId = req.user.id;
+    const rol = req.user.rol;
+    return this.recomendacionesService.findByPaciente(id, usuarioId, rol);
   }
 
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard, RecomendacionAccessGuard)
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -44,7 +52,7 @@ export class RecomendacionesController {
     return this.recomendacionesService.update(id, updateRecomendacionDto);
   }
 
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard, RecomendacionAccessGuard)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.recomendacionesService.remove(id);
