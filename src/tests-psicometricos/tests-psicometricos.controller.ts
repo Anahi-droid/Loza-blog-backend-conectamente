@@ -2,6 +2,8 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, Forbid
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { TestsPsicometricosService } from './tests-psicometricos.service';
 import { CreateTestResultadoDto } from './dto/create-test-resultado.dto';
+import { AsignarTestDto } from './dto/asignar-test.dto';
+import { ResponderTestDto } from './dto/responder-test.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('tests-psicometricos')
@@ -11,6 +13,45 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class TestsPsicometricosController {
   constructor(private readonly testsService: TestsPsicometricosService) {}
 
+  // ─── ENDPOINTS PARA ASIGNACIÓN DE TESTS (PSICÓLOGO) ──────────────────────
+  @Post('asignar')
+  @ApiOperation({ summary: 'Asignar/activar un test psicométrico para un paciente' })
+  async asignarTest(@Req() req, @Body() dto: AsignarTestDto) {
+    return this.testsService.asignarTest(req.user.id, dto);
+  }
+
+  @Put(':id/desactivar')
+  @ApiOperation({ summary: 'Desactivar un test asignado (psicólogo)' })
+  async desactivarTest(@Req() req, @Param('id') id: string) {
+    return this.testsService.desactivarTest(req.user.id, id);
+  }
+
+  @Get('mis-asignaciones')
+  @ApiOperation({ summary: 'Obtener asignaciones del psicólogo' })
+  async obtenerAsignacionesPsicologo(@Req() req) {
+    return this.testsService.obtenerAsignacionesPsicologo(req.user.id);
+  }
+
+  // ─── ENDPOINTS PARA PACIENTE ───────────────────────────────────────────────
+  @Get('paciente/asignaciones')
+  @ApiOperation({ summary: 'Obtener asignaciones del paciente' })
+  async obtenerAsignacionesPaciente(@Req() req) {
+    return this.testsService.obtenerAsignacionesPaciente(req.user.id);
+  }
+
+  @Post(':id/responder')
+  @ApiOperation({ summary: 'Responder un test psicométrico (paciente)' })
+  async responderTest(@Req() req, @Param('id') id: string, @Body() dto: ResponderTestDto) {
+    return this.testsService.responderTest(req.user.id, id, dto);
+  }
+
+  @Put(':id/marcar-visto')
+  @ApiOperation({ summary: 'Marcar resultado como visto (psicólogo)' })
+  async marcarComoVisto(@Req() req, @Param('id') id: string) {
+    return this.testsService.marcarComoVisto(id, req.user.id);
+  }
+
+  // ─── ENDPOINTS ORIGINALES (se mantienen) ───────────────────────────────────
   @Post()
   @ApiOperation({ summary: 'Registrar resultado de un test psicométrico' })
   async guardarTest(@Req() req, @Body() dto: CreateTestResultadoDto) {
