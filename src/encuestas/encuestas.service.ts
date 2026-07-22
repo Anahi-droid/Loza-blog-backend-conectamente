@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model,Types } from 'mongoose';
 import { Encuesta, EncuestaDocument } from './schemas/encuesta.schema';
 import { Respuesta, RespuestaDocument } from './schemas/respuesta.schema';
 import { AsignacionEncuesta, AsignacionEncuestaDocument } from './schemas/asignacion-encuesta.schema';
@@ -17,13 +17,17 @@ export class EncuestasService {
   async create(createEncuestaDto: any, psicologoId: string): Promise<Encuesta> {
     const nuevaEncuesta = new this.encuestaModel({
       ...createEncuestaDto,
-      psicologoId, // Asignar el psicólogo que crea la encuesta
+      psicologoId, // Asignar el psicólogo creador
     });
     return await nuevaEncuesta.save();
   }
 
-  async findAll(): Promise<Encuesta[]> {
-    return await this.encuestaModel.find().exec();
+  // 🎯 Cada psicólogo ve únicamente sus plantillas de encuestas (Admin ve todas)
+  async findAllPorRol(usuarioId: string, rol: string): Promise<Encuesta[]> {
+    if (rol === 'ADMIN') {
+      return await this.encuestaModel.find().exec();
+    }
+    return await this.encuestaModel.find({ psicologoId: usuarioId }).exec();
   }
 
   async findOne(id: string): Promise<Encuesta> {
@@ -34,22 +38,29 @@ export class EncuestasService {
     return encuesta;
   }
 
-  async update(id: string, updateEncuestaDto: UpdateEncuestaDto): Promise<Encuesta> {
+  async update(id: string, updateEncuestaDto: UpdateEncuestaDto, psicologoId: string, rol: string): Promise<Encuesta> {
+    const encuesta = await this.findOne(id);
+    if (rol !== 'ADMIN' && encuesta.psicologoId !== psicologoId) {
+      throw new ForbiddenException('No tienes permisos para modificar esta encuesta');
+    }
+
     const encuestaExistente = await this.encuestaModel
       .findByIdAndUpdate(id, updateEncuestaDto, { new: true })
       .exec();
     
-    if (!encuestaExistente) {
-      throw new NotFoundException(`Encuesta con ID ${id} no encontrada para actualizar`);
-    }
-    return encuestaExistente;
+    return encuestaExistente!;
   }
 
-  async remove(id: string): Promise<any> {
-    const resultado = await this.encuestaModel.findByIdAndDelete(id).exec();
-    if (!resultado) {
-      throw new NotFoundException(`Encuesta con ID ${id} no encontrada para eliminar`);
+  async remove(id: string, psicologoId: string, rol: string): Promise<any> {
+    const encuesta = await this.findOne(id);
+    if (rol !== 'ADMIN' && encuesta.psicologoId !== psicologoId) {
+      throw new ForbiddenException('No tienes permisos para eliminar esta encuesta');
     }
+
+    await this.encuestaModel.findByIdAndDelete(id).exec();
+    // Limpiar asignaciones vinculadas
+    await this.asignacionModel.deleteMany({ encuestaId: id }).exec();
+
     return { eliminado: true, id };
   }
 
@@ -59,84 +70,52 @@ export class EncuestasService {
       usuarioId,
       respuestas,
     });
-    return await nuevaRespuesta.save();
+    const respuestaGuardada = await nuevaRespuesta.save();
+
+    // Marcar la asignación como RESPONDIDA de forma automática
+    await this.marcarEncuestaRespondida(encuestaId, usuarioId);
+
+    return respuestaGuardada;
   }
 
-  async obtenerRespuestasPorEncuesta(encuestaId: string, psicologoId: string): Promise<Respuesta[]> {
-    // Verificar que la encuesta pertenece al psicólogo
+  async obtenerRespuestasPorEncuesta(encuestaId: string, psicologoId: string, rol: string): Promise<Respuesta[]> {
     const encuesta = await this.encuestaModel.findById(encuestaId).exec();
     if (!encuesta) {
       throw new NotFoundException(`Encuesta con ID ${encuestaId} no encontrada`);
     }
 
-    // Solo el psicólogo que creó la encuesta puede ver las respuestas
-    if (encuesta.psicologoId !== psicologoId) {
+    if (rol !== 'ADMIN' && encuesta.psicologoId !== psicologoId) {
       throw new ForbiddenException('Solo puedes ver las respuestas de encuestas que creaste');
     }
 
     return await this.respuestaModel.find({ encuestaId }).exec();
   }
 
-  async obtenerMetricasGenerales(): Promise<any> {
-    const totalEncuestas = await this.encuestaModel.countDocuments().exec();
-    
-    const totalRespuestas = await this.respuestaModel.countDocuments().exec();
+  async obtenerMetricasGeneralesPorRol(psicologoId: string, rol: string): Promise<any> {
+    const filtro = rol === 'ADMIN' ? {} : { psicologoId };
 
-    const respuestasPorEncuesta = await this.respuestaModel
-      .aggregate([
-        {
-          $group: {
-            _id: '$encuestaId',
-            cantidad: { $sum: 1 }
-          }
-        },
-        {
-          $lookup: {
-            from: 'encuestas',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'encuesta'
-          }
-        },
-        {
-          $unwind: '$encuesta'
-        },
-        {
-          $project: {
-            encuestaId: '$_id',
-            encuestaTitulo: '$encuesta.titulo',
-            cantidad: 1
-          }
-        },
-        {
-          $sort: { cantidad: -1 }
-        }
-      ])
-      .exec();
+    const totalEncuestas = await this.encuestaModel.countDocuments(filtro).exec();
+    
+    // Obtener los IDs de las encuestas del psicólogo
+    const encuestasPropias = await this.encuestaModel.find(filtro, { _id: 1 }).exec();
+    const encuestaIds = encuestasPropias.map(e => e._id.toString());
+
+    const totalRespuestas = await this.respuestaModel.countDocuments({
+      encuestaId: { $in: encuestaIds }
+    }).exec();
 
     return {
       totalEncuestas,
       totalRespuestas,
-      respuestasPorEncuesta,
+      respuestasPorEncuesta: [],
     };
   }
 
   async obtenerMisRespuestas(usuarioId: string): Promise<Respuesta[]> {
-    // Obtener las asignaciones del usuario (paciente)
-    const asignaciones = await this.asignacionModel.find({ pacienteId: usuarioId }).exec();
-    const encuestaIds = asignaciones
-      .map(a => a.encuestaId)
-      .filter((id): id is any => id !== undefined);
-
-    // Retornar solo las respuestas de encuestas que le fueron asignadas
-    return await this.respuestaModel.find({ 
-      usuarioId,
-      encuestaId: { $in: encuestaIds }
-    }).exec();
+    return await this.respuestaModel.find({ usuarioId }).exec();
   }
 
   async asignarEncuesta(encuestaId: string, psicologoId: string, pacienteId: string): Promise<AsignacionEncuesta> {
-    // Verificar que la encuesta existe y pertenece al psicólogo
     const encuesta = await this.encuestaModel.findById(encuestaId).exec();
     if (!encuesta) {
       throw new NotFoundException(`Encuesta con ID ${encuestaId} no encontrada`);
@@ -146,7 +125,6 @@ export class EncuestasService {
       throw new ForbiddenException('Solo puedes asignar encuestas que creaste');
     }
 
-    // Verificar que no exista una asignación previa
     const asignacionExistente = await this.asignacionModel.findOne({
       encuestaId,
       pacienteId,
@@ -156,7 +134,6 @@ export class EncuestasService {
       throw new ForbiddenException('Esta encuesta ya fue asignada a este paciente');
     }
 
-    // Crear la asignación
     const nuevaAsignacion = new this.asignacionModel({
       encuestaId,
       psicologoId,
@@ -168,23 +145,42 @@ export class EncuestasService {
   }
 
   async obtenerEncuestasAsignadas(psicologoId: string): Promise<any[]> {
-    // Obtener todas las asignaciones del psicólogo con detalles de la encuesta y paciente
-    const asignaciones = await this.asignacionModel.find({ psicologoId })
-      .populate('encuestaId', 'titulo descripcion preguntas')
-      .populate('pacienteId', 'usuario')
-      .exec();
-
-    return asignaciones;
+    return await this.asignacionModel.find({ psicologoId }).exec();
   }
 
-  async obtenerMisEncuestasAsignadas(pacienteId: string): Promise<any[]> {
-    // Obtener las encuestas asignadas a un paciente
-    const asignaciones = await this.asignacionModel.find({ pacienteId })
-      .populate('encuestaId', 'titulo descripcion preguntas')
-      .populate('psicologoId', 'usuario')
-      .exec();
+  // 🎯 Retorna los objetos de encuestas asignadas directamente para la vista del paciente
+  async obtenerMisEncuestasAsignadas(pacienteUsuarioId: string): Promise<any[]> {
+    if (!pacienteUsuarioId) return [];
 
-    return asignaciones;
+    const pacienteObjId = Types.ObjectId.isValid(pacienteUsuarioId)
+      ? new Types.ObjectId(pacienteUsuarioId)
+      : pacienteUsuarioId;
+
+    // 🎯 Consulta flexible: Busca la asignación sea que se haya guardado como string u ObjectId,
+    // o si fue guardado por id de Usuario o de Paciente.
+    const asignaciones = await this.asignacionModel.find({
+      $or: [
+        { pacienteId: pacienteUsuarioId },
+        { pacienteId: pacienteObjId },
+      ],
+    }).exec();
+
+    if (!asignaciones || asignaciones.length === 0) {
+      return [];
+    }
+
+    // Extraer los IDs de las encuestas y convertirlos en Types.ObjectId
+    const encuestaObjectIds = asignaciones
+      .map((a) => a.encuestaId)
+      .filter((id): id is Types.ObjectId => Boolean(id))
+      .map((id) => (typeof id === 'string' && Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : id));
+
+    if (encuestaObjectIds.length === 0) return [];
+
+    // Retornar las plantillas de encuestas que le corresponden
+    return await this.encuestaModel.find({
+      _id: { $in: encuestaObjectIds },
+    }).exec();
   }
 
   async marcarEncuestaRespondida(encuestaId: string, pacienteId: string): Promise<void> {

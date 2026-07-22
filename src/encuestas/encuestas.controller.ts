@@ -15,38 +15,44 @@ export class EncuestasController {
   constructor(private readonly encuestasService: EncuestasService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear una nueva plantilla de encuesta con preguntas dinámicas' })
+  @ApiOperation({ summary: 'Crear una nueva plantilla de encuesta' })
   create(@Req() req, @Body() createEncuestaDto: CreateEncuestaDto) {
     const psicologoId = req.user.id;
     return this.encuestasService.create(createEncuestaDto, psicologoId);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todas las encuestas disponibles' })
-  findAll() {
-    return this.encuestasService.findAll();
+  @ApiOperation({ summary: 'Obtener encuestas privadas por rol' })
+  findAll(@Req() req) {
+    return this.encuestasService.findAllPorRol(req.user.id, req.user.rol);
   }
 
-  @Get(':id/respuestas')
-  @ApiOperation({ summary: 'Obtener los resultados de respuestas de una encuesta específica' })
-  obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string, @Req() req) {
-    const psicologoId = req.user.id;
-    return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId, psicologoId);
+  @Get('mis-encuestas')
+  @ApiOperation({ summary: 'Obtener encuestas asignadas al paciente autenticado' })
+  obtenerMisEncuestas(@Req() req) {
+    const pacienteId = req.user.id;
+    return this.encuestasService.obtenerMisEncuestasAsignadas(pacienteId);
+  }
+
+  @Get('mis-respuestas')
+  @ApiOperation({ summary: 'Obtener las respuestas del paciente autenticado' })
+  async obtenerMisRespuestas(@Req() req) {
+    return this.encuestasService.obtenerMisRespuestas(req.user.id);
   }
 
   @Get('metricas/generales')
-  @ApiOperation({ summary: 'Obtener métricas generales de encuestas (Admin/Psicólogo)' })
+  @ApiOperation({ summary: 'Obtener métricas generales de encuestas' })
   async obtenerMetricasGenerales(@Req() req) {
     if (req.user.rol !== 'ADMIN' && req.user.rol !== 'PSICOLOGO') {
       throw new ForbiddenException('No tienes permisos para ver estas métricas.');
     }
-    return this.encuestasService.obtenerMetricasGenerales();
+    return this.encuestasService.obtenerMetricasGeneralesPorRol(req.user.id, req.user.rol);
   }
 
-  @Get('mis-respuestas')
-  @ApiOperation({ summary: 'Obtener las respuestas del usuario autenticado' })
-  async obtenerMisRespuestas(@Req() req) {
-    return this.encuestasService.obtenerMisRespuestas(req.user.id);
+  @Get(':id/respuestas')
+  @ApiOperation({ summary: 'Obtener respuestas de una encuesta' })
+  obtenerRespuestasPorEncuesta(@Param('id') encuestaId: string, @Req() req) {
+    return this.encuestasService.obtenerRespuestasPorEncuesta(encuestaId, req.user.id, req.user.rol);
   }
 
   @Get(':id')
@@ -56,25 +62,26 @@ export class EncuestasController {
   }
 
   @Post(':id/responder')
-  @ApiOperation({ summary: 'Guardar las respuestas de un paciente para una encuesta' })
+  @ApiOperation({ summary: 'Guardar las respuestas de un paciente' })
   guardarRespuesta(
     @Param('id') encuestaId: string,
+    @Req() req,
     @Body() createRespuestaDto: CreateRespuestaDto,
   ) {
-    const { usuarioId, respuestas } = createRespuestaDto;
-    return this.encuestasService.guardarRespuesta(encuestaId, usuarioId, respuestas);
+    const usuarioId = req.user.id;
+    return this.encuestasService.guardarRespuesta(encuestaId, usuarioId, createRespuestaDto.respuestas);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Actualizar una encuesta por ID' })
-  update(@Param('id') id: string, @Body() updateDto: UpdateEncuestaDto) {
-    return this.encuestasService.update(id, updateDto);
+  update(@Param('id') id: string, @Req() req, @Body() updateDto: UpdateEncuestaDto) {
+    return this.encuestasService.update(id, updateDto, req.user.id, req.user.rol);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar una encuesta por ID' })
-  remove(@Param('id') id: string) {
-    return this.encuestasService.remove(id);
+  remove(@Param('id') id: string, @Req() req) {
+    return this.encuestasService.remove(id, req.user.id, req.user.rol);
   }
 
   @Post(':id/asignar')
@@ -85,16 +92,8 @@ export class EncuestasController {
   }
 
   @Get('mis-asignadas')
-  @ApiOperation({ summary: 'Obtener encuestas asignadas al psicólogo autenticado' })
+  @ApiOperation({ summary: 'Obtener encuestas asignadas por el psicólogo autenticado' })
   obtenerMisEncuestasAsignadas(@Req() req) {
-    const psicologoId = req.user.id;
-    return this.encuestasService.obtenerEncuestasAsignadas(psicologoId);
-  }
-
-  @Get('mis-encuestas')
-  @ApiOperation({ summary: 'Obtener encuestas asignadas al paciente autenticado' })
-  obtenerMisEncuestas(@Req() req) {
-    const pacienteId = req.user.id;
-    return this.encuestasService.obtenerMisEncuestasAsignadas(pacienteId);
+    return this.encuestasService.obtenerEncuestasAsignadas(req.user.id);
   }
 }
