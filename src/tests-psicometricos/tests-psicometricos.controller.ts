@@ -45,12 +45,6 @@ export class TestsPsicometricosController {
     return this.testsService.responderTest(req.user.id, id, dto);
   }
 
-  @Put(':id/marcar-visto')
-  @ApiOperation({ summary: 'Marcar resultado como visto (psicólogo)' })
-  async marcarComoVisto(@Req() req, @Param('id') id: string) {
-    return this.testsService.marcarComoVisto(id, req.user.id);
-  }
-
   // ─── ENDPOINTS ORIGINALES (se mantienen) ───────────────────────────────────
   @Post()
   @ApiOperation({ summary: 'Registrar resultado de un test psicométrico' })

@@ -37,9 +37,6 @@ export class AsignacionTest extends Document {
   @Prop({ default: 0 })
   numeroIntentos!: number;
 
-  @Prop({ default: false })
-  nuevoResultado!: boolean;
-
   createdAt?: Date;
   updatedAt?: Date;
 }
