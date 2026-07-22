@@ -25,7 +25,6 @@ export class TestsPsicometricosService {
     if (existente) {
       // Si ya existe, cambiar estado a ACTIVO (reactivar)
       existente.estado = 'ACTIVO';
-      existente.nuevoResultado = false;
       return existente.save();
     }
 
@@ -36,7 +35,6 @@ export class TestsPsicometricosService {
       estado: 'ACTIVO',
       intentos: [],
       numeroIntentos: 0,
-      nuevoResultado: false,
     });
     return nueva.save();
   }
@@ -71,12 +69,10 @@ export class TestsPsicometricosService {
     if (!asignacion) throw new NotFoundException('Asignación no encontrada');
     if (asignacion.pacienteId !== pacienteId) throw new ForbiddenException('No tienes permisos');
     if (asignacion.estado !== 'ACTIVO') throw new ForbiddenException('El test no está activo');
-    
-    // Límite de 1 intento por test
-    if (asignacion.intentos.length >= 1) {
-      throw new ForbiddenException('Ya has completado este test. Solo se permite un intento.');
-    }
 
+    // El estado 'ACTIVO' ya garantiza 1 intento por activación: al responder pasa a
+    // 'COMPLETADO' y solo el psicólogo puede reactivarlo. No se debe mirar intentos.length
+    // (persisten activaciones anteriores) o nunca se podría repetir el test tras reactivar.
     const nuevoIntento = {
       fecha: new Date(),
       respuestas: dto.respuestas,
@@ -89,18 +85,7 @@ export class TestsPsicometricosService {
     asignacion.intentos.push(nuevoIntento);
     asignacion.numeroIntentos = asignacion.intentos.length;
     asignacion.estado = 'COMPLETADO';
-    asignacion.nuevoResultado = true;
 
-    return asignacion.save();
-  }
-
-  // ─── MARCAR COMO VISTO ───────────────────────────────────────
-  async marcarComoVisto(asignacionId: string, psicologoId: string): Promise<AsignacionTest> {
-    const asignacion = await this.asignacionModel.findById(asignacionId).exec();
-    if (!asignacion) throw new NotFoundException('Asignación no encontrada');
-    if (asignacion.psicologoId !== psicologoId) throw new ForbiddenException('No tienes permisos');
-    
-    asignacion.nuevoResultado = false;
     return asignacion.save();
   }
 
