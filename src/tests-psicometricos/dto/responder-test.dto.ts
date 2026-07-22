@@ -1,4 +1,4 @@
-import { IsObject, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsObject, IsNotEmpty, IsNumber, IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class ResponderTestDto {
   @IsObject()
@@ -17,5 +17,7 @@ export class ResponderTestDto {
   @IsNotEmpty()
   desglose!: Record<string, any>;
 
+  @IsOptional()
+  @IsBoolean()
   alertaCritica?: boolean;
 }
