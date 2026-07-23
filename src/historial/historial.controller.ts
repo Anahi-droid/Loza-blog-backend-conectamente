@@ -15,11 +15,13 @@ export class HistorialController {
     return this.historialService.create(createHistorialDto, psicologoId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
   findAll() {
     return this.historialService.findAll();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.historialService.findOne(id);

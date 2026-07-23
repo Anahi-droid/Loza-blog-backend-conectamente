@@ -1,0 +1,4336 @@
+{
+  "info": {
+    "_postman_id": "8a31f881-727c-413c-a33f-0ce3945b1977",
+    "name": "ConectaMente API (Clínica Psicológica)",
+    "description": "Colección funcional para el backend NestJS de la Clínica Psicológica (ConectaMente).\n\n**Cómo usar:**\n1. Importa también el archivo de entorno 'ConectaMente - Local.postman_environment.json' y selecciónalo.\n2. Ajusta 'baseUrl' si tu API no corre en http://localhost:3000.\n3. Ejecuta las carpetas EN ORDEN (01 a 18), o usa el Collection Runner sobre toda la colección.\n4. Los scripts de test de cada request de creación guardan automáticamente los IDs/tokens generados como variables de entorno, que son reutilizados por las siguientes requests.\n\n**Roles:** PACIENTE, PSICOLOGO, ADMIN. El registro público (/auth/register) acepta el campo rol explícitamente (incluye ADMIN), lo cual se usa aquí para sembrar datos de prueba; en producción esto debería restringirse.\n\n**Notas de datos:**\n- Las entidades principales (usuarios, pacientes, psicólogos, citas, historiales, etc.) usan UUID como ID (TypeORM/Postgres).\n- Chats, Notificaciones y Tests Psicométricos usan MongoDB, por lo que su ID de recurso es el `_id` de Mongo.\n- `historiales`, `progreso` y `recomendaciones` referencian al paciente por el ID de **Usuario** (pacienteUsuarioId), no por el ID de perfil de Paciente.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Auth",
+      "item": [
+        {
+          "name": "Registrar Paciente",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registro público. Si el rol no se envía, el backend asigna PACIENTE por defecto. Devuelve 409 si el email ya existe (aceptado como resultado válido en pruebas repetidas).",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{pacienteEmail}}\",\n  \"password\": \"{{pacientePassword}}\",\n  \"nombre\": \"Juan Carlos\",\n  \"apellido\": \"Pérez Gómez\",\n  \"rol\": \"PACIENTE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registro OK o ya existente (409)', function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('pacienteUsuarioId', val);\n        console.log('pacienteUsuarioId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar Psicólogo (usuario base, ver también carpeta Psicólogos)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Alternativa simple para crear solo el Usuario con rol PSICOLOGO. Para un perfil profesional completo (con especialidades y licencia) usa 'Crear perfil de psicólogo (unificado)' en la carpeta Psicólogos, que es el flujo recomendado.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{psicologoEmail}}\",\n  \"password\": \"{{psicologoPassword}}\",\n  \"nombre\": \"Ana Lucía\",\n  \"apellido\": \"Torres Vega\",\n  \"rol\": \"PSICOLOGO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([201, 409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar Admin (seed inicial)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "El DTO de registro público permite indicar rol=ADMIN explícitamente (el AuthService solo aplica PACIENTE por defecto si no se envía rol). Se usa aquí únicamente para poblar un usuario ADMIN de pruebas; en un entorno real este bootstrap debería hacerse de forma controlada (seed/migración), no vía endpoint público.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"nombre\": \"Carlos\",\n  \"apellido\": \"Administrador\",\n  \"rol\": \"ADMIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([201, 409]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('adminUsuarioId', val);\n        console.log('adminUsuarioId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Paciente",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Devuelve { accessToken }. El JWT incluye sub, rol, email, nombre, apellido y psicologoId (null para pacientes).",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{pacienteEmail}}\",\n  \"password\": \"{{pacientePassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login exitoso', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {\n    const json = pm.response.json();\n    if (json.accessToken) {\n        pm.environment.set('accessTokenPaciente', json.accessToken);\n        console.log('accessTokenPaciente guardado');\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Psicólogo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Ejecutar DESPUÉS de crear el perfil unificado en la carpeta Psicólogos, ya que ese endpoint crea el Usuario con este email/password.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{psicologoEmail}}\",\n  \"password\": \"{{psicologoPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login exitoso', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {\n    const json = pm.response.json();\n    if (json.accessToken) {\n        pm.environment.set('accessTokenPsicologo', json.accessToken);\n        console.log('accessTokenPsicologo guardado');\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login exitoso', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {\n    const json = pm.response.json();\n    if (json.accessToken) {\n        pm.environment.set('accessTokenAdmin', json.accessToken);\n        console.log('accessTokenAdmin guardado');\n    }\n}"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Registro y login. Ejecutar esta carpeta primero. El orden recomendado de toda la colección es: Auth -> Especialidades -> Psicólogos -> Auth (Login Psicólogo) -> Pacientes -> resto de módulos."
+    },
+    {
+      "name": "02 - Especialidades",
+      "item": [
+        {
+          "name": "Crear especialidad",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/especialidades",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "especialidades"
+              ]
+            },
+            "description": "Endpoint público (sin guard) — marcado en el código como 'público para test'.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Psicología Clínica\",\n  \"descripcion\": \"Diagnóstico y tratamiento de trastornos mentales y del comportamiento.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([201, 409]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('especialidadId', val);\n        console.log('especialidadId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar especialidades",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/especialidades",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "especialidades"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener especialidad por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/especialidades/{{especialidadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "especialidades",
+                "{{especialidadId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar especialidad",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/especialidades/{{especialidadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "especialidades",
+                "{{especialidadId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Área dedicada al diagnóstico y tratamiento clínico de trastornos psicológicos.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar especialidad",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/especialidades/{{especialidadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "especialidades",
+                "{{especialidadId}}"
+              ]
+            },
+            "description": "Ejecutar solo al final, ya que Psicólogos referencia especialidadId por ManyToMany.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "03 - Psicólogos",
+      "item": [
+        {
+          "name": "Crear perfil de psicólogo (unificado)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/psicologos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "psicologos"
+              ]
+            },
+            "description": "Endpoint público. Crea en una sola operación el Usuario (rol PSICOLOGO) y su perfil profesional (Psicologo) vinculado a especialidades existentes. Ejecutar 'Crear especialidad' antes para tener un especialidadId válido.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana Lucía\",\n  \"apellido\": \"Torres Vega\",\n  \"email\": \"{{psicologoEmail}}\",\n  \"password\": \"{{psicologoPassword}}\",\n  \"especialidadesIds\": [\n    \"{{especialidadId}}\"\n  ],\n  \"licenciaProfesional\": \"PSI-EC-004521\",\n  \"telefono\": \"+593991234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([201, 409]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('psicologoPerfilId', val);\n        console.log('psicologoPerfilId guardado:', val);\n    }\n}",
+                  "if (pm.response.code === 201) {\n    const json = pm.response.json();\n    if (json.usuario && json.usuario.id) {\n        pm.environment.set('psicologoUsuarioId', json.usuario.id);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar psicólogos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/psicologos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "psicologos"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar perfil de psicólogo",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/psicologos/{{psicologoPerfilId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "psicologos",
+                "{{psicologoPerfilId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"biografia\": \"Psicóloga clínica con 8 años de experiencia en terapia cognitivo-conductual.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar perfil de psicólogo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/psicologos/{{psicologoPerfilId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "psicologos",
+                "{{psicologoPerfilId}}"
+              ]
+            },
+            "description": "Ejecutar al final del flujo de pruebas.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Tras 'Crear perfil de psicólogo (unificado)', vuelve a la carpeta Auth y ejecuta 'Login Psicólogo' para obtener accessTokenPsicologo."
+    },
+    {
+      "name": "04 - Admin (Usuarios)",
+      "item": [
+        {
+          "name": "Crear staff (PSICOLOGO/ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios"
+              ]
+            },
+            "description": "Requiere rol ADMIN (JwtAuthGuard + RolesGuard).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff.demo@conectamente.test\",\n  \"password\": \"Staff12345!\",\n  \"nombre\": \"Pedro\",\n  \"apellido\": \"Ramírez\",\n  \"rol\": \"PSICOLOGO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([201, 409]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar usuarios (paginado + filtro rol)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios?pagina=1&limite=10&rol=PACIENTE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1"
+                },
+                {
+                  "key": "limite",
+                  "value": "10"
+                },
+                {
+                  "key": "rol",
+                  "value": "PACIENTE",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dar de baja usuario (borrado lógico)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios/{{pacienteUsuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios",
+                "{{pacienteUsuarioId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reactivar usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/usuarios/{{pacienteUsuarioId}}/reactivar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "usuarios",
+                "{{pacienteUsuarioId}}",
+                "reactivar"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Todas las rutas requieren JWT con rol ADMIN."
+    },
+    {
+      "name": "05 - Usuarios",
+      "item": [
+        {
+          "name": "Crear usuario (directo)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "Endpoint sin protección (uso interno/testing). Prefiere /auth/register o /admin/usuarios en flujos reales.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario.directo.demo@conectamente.test\",\n  \"password\": \"Usuario123!\",\n  \"nombre\": \"Laura\",\n  \"apellido\": \"Mendoza\",\n  \"rol\": \"PACIENTE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([201, 409]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('usuarioDirectoId', val);\n        console.log('usuarioDirectoId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener usuario por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{pacienteUsuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{pacienteUsuarioId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{usuarioDirectoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{usuarioDirectoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Laura Fernanda\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Desactivar usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{usuarioDirectoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{usuarioDirectoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "06 - Perfil",
+      "item": [
+        {
+          "name": "Obtener mi perfil",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/perfil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "perfil"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener perfil por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/perfil/{{pacienteUsuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "perfil",
+                "{{pacienteUsuarioId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar mi perfil",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/perfil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "perfil"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Carlos\",\n  \"apellido\": \"Pérez Gómez\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Todas las rutas requieren JWT. El controller expone también POST / y DELETE / (crear/eliminar mi perfil); se omiten del flujo principal porque operan sobre el usuario autenticado y DELETE es destructivo."
+    },
+    {
+      "name": "07 - Pacientes",
+      "item": [
+        {
+          "name": "Crear expediente de paciente",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes"
+              ]
+            },
+            "description": "Requiere JWT (cualquier rol autenticado). OJO: el servicio crea un Usuario NUEVO con contraseña fija 'Paciente123*' para cada expediente, independientemente del campo usuarioId enviado — revisa pacientes.service.ts si necesitas vincular un usuario ya existente.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Carlos\",\n  \"apellido\": \"Pérez Gómez\",\n  \"email\": \"expediente.{{$timestamp}}@conectamente.test\",\n  \"fechaNacimiento\": \"1995-03-14\",\n  \"genero\": \"Masculino\",\n  \"ocupacion\": \"Ingeniero de Software\",\n  \"telefonoEmergencia\": \"+593987654321\",\n  \"contactoEmergenciaNombre\": \"María Pérez\",\n  \"tipoSangre\": \"O+\",\n  \"antecedentesMedicos\": \"Ninguno relevante\",\n  \"motivoConsultaInicial\": \"Ansiedad generalizada y estrés laboral\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([201, 409]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('pacientePerfilId', val);\n        console.log('pacientePerfilId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar pacientes (filtrado por rol)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar pacientes activos (público, para modal de citas)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes/buscar/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes",
+                "buscar",
+                "todos"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener paciente por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes/{{pacientePerfilId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes",
+                "{{pacientePerfilId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener mi expediente (paciente autenticado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes/me/perfil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes",
+                "me",
+                "perfil"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar paciente",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes/{{pacientePerfilId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes",
+                "{{pacientePerfilId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ocupacion\": \"Ingeniero de Software Senior\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar paciente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes/{{pacientePerfilId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes",
+                "{{pacientePerfilId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "08 - Agendas",
+      "item": [
+        {
+          "name": "Crear bloque de disponibilidad",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas"
+              ]
+            },
+            "description": "El body solo lee 'fechaHoraInicio'; el psicólogo se resuelve internamente a partir del JWT.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaHoraInicio\": \"2026-08-05T09:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('agendaId', val);\n        console.log('agendaId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar mis bloques de agenda",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar disponibles por psicólogo (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/psicologo/{{psicologoPerfilId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "psicologo",
+                "{{psicologoPerfilId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener bloque de agenda por ID (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/{{agendaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "{{agendaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar bloque de agenda",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/{{agendaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "{{agendaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaHoraInicio\": \"2026-08-05T10:00:00.000Z\",\n  \"estaReservado\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar bloque de agenda",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/{{agendaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "{{agendaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear horario de trabajo base",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/horarios-trabajo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "horarios-trabajo"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diaSemana\": 1,\n  \"horaApertura\": \"08:00\",\n  \"horaCierre\": \"17:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('horarioTrabajoId', val);\n        console.log('horarioTrabajoId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener horarios de trabajo (propios)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/horarios-trabajo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "horarios-trabajo"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener horario de trabajo por ID (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/horarios-trabajo/{{horarioTrabajoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "horarios-trabajo",
+                "{{horarioTrabajoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Modificar horario de trabajo",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/horarios-trabajo/{{horarioTrabajoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "horarios-trabajo",
+                "{{horarioTrabajoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"horaApertura\": \"09:00\",\n  \"horaCierre\": \"18:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar horario de trabajo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/horarios-trabajo/{{horarioTrabajoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "horarios-trabajo",
+                "{{horarioTrabajoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar excepción de disponibilidad",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/disponibilidad-excepciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "disponibilidad-excepciones"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaInicio\": \"2026-08-10T00:00:00.000Z\",\n  \"fechaFin\": \"2026-08-15T00:00:00.000Z\",\n  \"motivo\": \"Vacaciones\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('excepcionId', val);\n        console.log('excepcionId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar mis excepciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/disponibilidad-excepciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "disponibilidad-excepciones"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener excepción por ID (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/disponibilidad-excepciones/{{excepcionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "disponibilidad-excepciones",
+                "{{excepcionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Modificar excepción",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/disponibilidad-excepciones/{{excepcionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "disponibilidad-excepciones",
+                "{{excepcionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Vacaciones familiares\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar excepción",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agendas/disponibilidad-excepciones/{{excepcionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agendas",
+                "disponibilidad-excepciones",
+                "{{excepcionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "09 - Citas",
+      "item": [
+        {
+          "name": "Reservar cita",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citas"
+              ]
+            },
+            "description": "El paciente se toma de req.user.id salvo que el rol sea PSICOLOGO/ADMIN y se envíe pacienteId explícito.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agendaId\": \"{{agendaId}}\",\n  \"motivoConsulta\": \"Seguimiento de tratamiento por ansiedad\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('citaId', val);\n        console.log('citaId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener mis citas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener cita por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citas/{{citaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citas",
+                "{{citaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar estado/notas de cita",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citas/{{citaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citas",
+                "{{citaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"CONFIRMADA\",\n  \"notasNotasMedicas\": \"El paciente muestra evolución favorable.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar estado de pago",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citas/pagos/{{pagoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citas",
+                "pagos",
+                "{{pagoId}}"
+              ]
+            },
+            "description": "Sustituye {{pagoId}} por el ID real del pago asociado a la cita (no expuesto directamente por otro endpoint en este módulo).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"PAGADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancelar cita",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citas/{{citaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citas",
+                "{{citaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Enum de estado: PENDIENTE, CONFIRMADA, CANCELADA, REALIZADA."
+    },
+    {
+      "name": "10 - Historiales",
+      "item": [
+        {
+          "name": "Crear historial clínico",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales"
+              ]
+            },
+            "description": "pacienteId debe ser el ID de Usuario (no el ID de perfil de Paciente) — la relación 'paciente' del historial apunta a la entidad Usuario.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pacienteId\": \"{{pacienteUsuarioId}}\",\n  \"fechaSesion\": \"2026-07-20T15:00:00.000Z\",\n  \"diagnostico\": \"Trastorno de ansiedad generalizada (F41.1)\",\n  \"observaciones\": \"Paciente muestra mejoría progresiva tras 4 sesiones.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('historialId', val);\n        console.log('historialId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar historiales (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener historial por ID (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales/{{historialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales",
+                "{{historialId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar historial",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales/{{historialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales",
+                "{{historialId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observaciones\": \"Paciente reporta menor frecuencia de episodios de ansiedad.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar historial",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales/{{historialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales",
+                "{{historialId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear diagnóstico (CIE-10)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales/diagnosticos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales",
+                "diagnosticos"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"historialId\": \"{{historialId}}\",\n  \"codigoCIE10\": \"F41.1\",\n  \"descripcion\": \"Trastorno de ansiedad generalizada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('diagnosticoId', val);\n        console.log('diagnosticoId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar todos los diagnósticos (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales/diagnosticos/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales",
+                "diagnosticos",
+                "todos"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener diagnóstico por ID (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales/diagnosticos/{{diagnosticoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales",
+                "diagnosticos",
+                "{{diagnosticoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar diagnóstico",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales/diagnosticos/{{diagnosticoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales",
+                "diagnosticos",
+                "{{diagnosticoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Trastorno de ansiedad generalizada, en remisión parcial\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar diagnóstico",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/historiales/diagnosticos/{{diagnosticoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "historiales",
+                "diagnosticos",
+                "{{diagnosticoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "11 - Progreso",
+      "item": [
+        {
+          "name": "Registrar hito de progreso",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/progreso",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "progreso"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"historialId\": \"{{historialId}}\",\n  \"fecha\": \"2026-07-21T15:00:00.000Z\",\n  \"estadoEmocional\": \"Estable con mejoría\",\n  \"avance\": \"70%\",\n  \"observaciones\": \"El paciente aplica correctamente las técnicas de respiración enseñadas.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('progresoId', val);\n        console.log('progresoId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar progresos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/progreso",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "progreso"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener progreso por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/progreso/{{progresoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "progreso",
+                "{{progresoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener progreso por paciente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/progreso/paciente/{{pacienteUsuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "progreso",
+                "paciente",
+                "{{pacienteUsuarioId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Métricas generales de progreso (Admin/Psicólogo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/progreso/metricas/generales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "progreso",
+                "metricas",
+                "generales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar progreso",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/progreso/{{progresoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "progreso",
+                "{{progresoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"avance\": \"85%\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar progreso",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/progreso/{{progresoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "progreso",
+                "{{progresoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "12 - Recomendaciones",
+      "item": [
+        {
+          "name": "Crear recomendación",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pacienteId\": \"{{pacienteUsuarioId}}\",\n  \"fecha\": \"2026-07-21T15:00:00.000Z\",\n  \"titulo\": \"Ejercicios de respiración diafragmática\",\n  \"descripcion\": \"Practicar 10 minutos diarios de respiración diafragmática antes de dormir.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('recomendacionId', val);\n        console.log('recomendacionId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar recomendaciones (según rol)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar todos los progresos de recomendaciones (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/progresos/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "progresos",
+                "todos"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener recomendación por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/{{recomendacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "{{recomendacionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener recomendaciones por paciente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/paciente/{{pacienteUsuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "paciente",
+                "{{pacienteUsuarioId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar recomendación",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/{{recomendacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "{{recomendacionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Practicar 15 minutos diarios de respiración diafragmática antes de dormir.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar recomendación",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/{{recomendacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "{{recomendacionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear registro de progreso (recomendaciones)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/progresos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "progresos"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"historialId\": \"{{historialId}}\",\n  \"fecha\": \"2026-07-21T15:00:00.000Z\",\n  \"estadoEmocional\": \"Motivado\",\n  \"avance\": \"60%\",\n  \"observaciones\": \"Buena adherencia a las recomendaciones asignadas.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('recomendacionProgresoId', val);\n        console.log('recomendacionProgresoId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener progreso de recomendación por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/progresos/{{recomendacionProgresoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "progresos",
+                "{{recomendacionProgresoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar progreso de recomendación",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/progresos/{{recomendacionProgresoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "progresos",
+                "{{recomendacionProgresoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"avance\": \"75%\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar progreso de recomendación",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recomendaciones/progresos/{{recomendacionProgresoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recomendaciones",
+                "progresos",
+                "{{recomendacionProgresoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "13 - Encuestas",
+      "item": [
+        {
+          "name": "Crear plantilla de encuesta",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Escala de Bienestar Psicológico\",\n  \"descripcion\": \"Encuesta breve para medir el estado de bienestar general del paciente.\",\n  \"preguntas\": [\n    {\n      \"pregunta\": \"¿Cómo calificarías tu estado de ánimo esta semana?\",\n      \"tipo\": \"ESCALA\",\n      \"opciones\": [\n        \"1\",\n        \"2\",\n        \"3\",\n        \"4\",\n        \"5\"\n      ]\n    },\n    {\n      \"pregunta\": \"¿Has tenido dificultades para dormir?\",\n      \"tipo\": \"MULTIPLE\",\n      \"opciones\": [\n        \"Nunca\",\n        \"A veces\",\n        \"Frecuentemente\",\n        \"Siempre\"\n      ]\n    },\n    {\n      \"pregunta\": \"Describe brevemente cómo te has sentido\",\n      \"tipo\": \"TEXTO\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('encuestaId', val);\n        console.log('encuestaId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar encuestas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener respuestas de una encuesta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/{{encuestaId}}/respuestas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "{{encuestaId}}",
+                "respuestas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Métricas generales de encuestas (Admin/Psicólogo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/metricas/generales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "metricas",
+                "generales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener mis respuestas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/mis-respuestas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "mis-respuestas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener encuesta por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/{{encuestaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "{{encuestaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Responder encuesta",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/{{encuestaId}}/responder",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "{{encuestaId}}",
+                "responder"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuarioId\": \"{{pacienteUsuarioId}}\",\n  \"respuestas\": {\n    \"¿Cómo calificarías tu estado de ánimo esta semana?\": \"4\",\n    \"¿Has tenido dificultades para dormir?\": \"A veces\",\n    \"Describe brevemente cómo te has sentido\": \"Mejor que la semana pasada, con más energía.\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar encuesta",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/{{encuestaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "{{encuestaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Escala de Bienestar Psicológico (v2)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Asignar encuesta a paciente",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/{{encuestaId}}/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "{{encuestaId}}",
+                "asignar"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pacienteId\": \"{{pacienteUsuarioId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mis encuestas asignadas (psicólogo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/mis-asignadas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "mis-asignadas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mis encuestas asignadas (paciente)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/mis-encuestas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "mis-encuestas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar encuesta",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encuestas/{{encuestaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encuestas",
+                "{{encuestaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "14 - Tests Psicométricos",
+      "item": [
+        {
+          "name": "Asignar test psicométrico",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/asignar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "asignar"
+              ]
+            },
+            "description": "tipoTest admite: TENDENCIAS_PERSONALES, BIENESTAR_ACTUAL.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pacienteId\": \"{{pacienteUsuarioId}}\",\n  \"tipoTest\": \"BIENESTAR_ACTUAL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('testAsignacionId', val);\n        console.log('testAsignacionId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desactivar test asignado",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/{{testAsignacionId}}/desactivar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "{{testAsignacionId}}",
+                "desactivar"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mis asignaciones (psicólogo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/mis-asignaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "mis-asignaciones"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mis asignaciones (paciente)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/paciente/asignaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "paciente",
+                "asignaciones"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Responder test psicométrico",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/{{testAsignacionId}}/responder",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "{{testAsignacionId}}",
+                "responder"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"respuestas\": {\n    \"pregunta1\": \"3\",\n    \"pregunta2\": \"4\",\n    \"pregunta3\": \"2\"\n  },\n  \"puntajeTotal\": 42,\n  \"diagnostico\": \"Nivel de bienestar moderado\",\n  \"desglose\": {\n    \"ansiedad\": 12,\n    \"estadoAnimo\": 15,\n    \"sueno\": 15\n  },\n  \"alertaCritica\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar resultado de test (directo)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoTest\": \"BIENESTAR_ACTUAL\",\n  \"respuestas\": {\n    \"pregunta1\": \"3\",\n    \"pregunta2\": \"4\"\n  },\n  \"puntajeTotal\": 38,\n  \"diagnosticoPreliminar\": \"Nivel de bienestar moderado-alto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('testResultadoId', val);\n        console.log('testResultadoId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mis resultados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/mis-resultados",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "mis-resultados"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estadísticas mensuales por tipo de test (Admin/Psicólogo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/estadisticas/BIENESTAR_ACTUAL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "estadisticas",
+                "BIENESTAR_ACTUAL"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener resultado por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/{{testResultadoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "{{testResultadoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar resultado",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/{{testResultadoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "{{testResultadoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnosticoPreliminar\": \"Nivel de bienestar alto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar resultado",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tests-psicometricos/{{testResultadoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tests-psicometricos",
+                "{{testResultadoId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "15 - Notificaciones",
+      "item": [
+        {
+          "name": "Crear notificación",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notificaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notificaciones"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuarioId\": \"{{pacienteUsuarioId}}\",\n  \"titulo\": \"Nueva Cita Agendada\",\n  \"mensaje\": \"Tu cita con el psicólogo ha sido confirmada para mañana.\",\n  \"tipo\": \"CITA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json._id || json._id;\n    if (val) {\n        pm.environment.set('notificacionId', val);\n        console.log('notificacionId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones por usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notificaciones/usuario/{{pacienteUsuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notificaciones",
+                "usuario",
+                "{{pacienteUsuarioId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener notificación por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notificaciones/{{notificacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notificaciones",
+                "{{notificacionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar todas (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notificaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notificaciones"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Marcar como leída",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notificaciones/{{notificacionId}}/leer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notificaciones",
+                "{{notificacionId}}",
+                "leer"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar notificación",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notificaciones/{{notificacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notificaciones",
+                "{{notificacionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Cita reprogramada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar notificación",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notificaciones/{{notificacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notificaciones",
+                "{{notificacionId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Persistencia en MongoDB — el ID de recurso es el _id de Mongo."
+    },
+    {
+      "name": "16 - Chats",
+      "item": [
+        {
+          "name": "Enviar mensaje de chat",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chats"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destinatarioId\": \"{{psicologoUsuarioId}}\",\n  \"mensaje\": \"Hola doctora, tengo una duda sobre mi próxima cita.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json._id || json._id;\n    if (val) {\n        pm.environment.set('chatId', val);\n        console.log('chatId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener historial de chat con un usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chats/{{psicologoUsuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chats",
+                "{{psicologoUsuarioId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar mensaje",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chats/{{chatId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chats",
+                "{{chatId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensaje\": \"Hola doctora, tengo una duda sobre mi próxima cita (editado).\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar mensaje",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chats/{{chatId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chats",
+                "{{chatId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Persistencia en MongoDB — el ID de recurso es el _id de Mongo."
+    },
+    {
+      "name": "17 - Solicitudes de Vinculación",
+      "item": [
+        {
+          "name": "Enviar solicitud de vinculación",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/solicitudes/enviar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "solicitudes",
+                "enviar"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPaciente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"psicologoId\": \"{{psicologoPerfilId}}\",\n  \"mensajeInicial\": \"Quisiera agendar una consulta inicial.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('solicitudId', val);\n        console.log('solicitudId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bandeja de solicitudes (psicólogo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/solicitudes/bandeja",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "solicitudes",
+                "bandeja"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Procesar solicitud (aceptar/rechazar)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/solicitudes/{{solicitudId}}/procesar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "solicitudes",
+                "{{solicitudId}}",
+                "procesar"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenPsicologo}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"ACEPTADA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "18 - Solicitudes de Psicólogos",
+      "item": [
+        {
+          "name": "Postular como psicólogo (público)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/solicitudes-psicologos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "solicitudes-psicologos"
+              ]
+            },
+            "description": "Endpoint público usado desde /register-psicologo en el frontend.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Roberto\",\n  \"apellido\": \"Salazar\",\n  \"email\": \"postulante.demo@conectamente.test\",\n  \"password\": \"Postulante123!\",\n  \"licenciaProfesional\": \"PSI-EC-009981\",\n  \"telefono\": \"+593998765432\",\n  \"especialidad\": \"Psicología Infantil\",\n  \"mensajeAdicional\": \"Cuento con 5 años de experiencia en terapia infantil.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es exitoso', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {\n    const json = pm.response.json();\n    const val = json.id || json._id;\n    if (val) {\n        pm.environment.set('solicitudPsicologoId', val);\n        console.log('solicitudPsicologoId guardado:', val);\n    }\n}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar postulaciones (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/solicitudes-psicologos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "solicitudes-psicologos"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Aprobar postulación",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/solicitudes-psicologos/{{solicitudPsicologoId}}/aprobar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "solicitudes-psicologos",
+                "{{solicitudPsicologoId}}",
+                "aprobar"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminObservaciones\": \"Documentación verificada correctamente.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rechazar postulación",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/solicitudes-psicologos/{{solicitudPsicologoId}}/rechazar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "solicitudes-psicologos",
+                "{{solicitudPsicologoId}}",
+                "rechazar"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminObservaciones\": \"Licencia profesional no verificable.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}
