@@ -42,7 +42,8 @@ export class ProgresoController {
     if (req.user.rol !== 'ADMIN' && req.user.rol !== 'PSICOLOGO') {
       throw new ForbiddenException('No tienes permisos para ver estas métricas.');
     }
-    return this.progresoService.obtenerMetricasGenerales();
+    const psicologoId = req.user.rol === 'PSICOLOGO' ? req.user.psicologoId : undefined;
+    return this.progresoService.obtenerMetricasGenerales(psicologoId);
   }
 
   @Patch(':id')
