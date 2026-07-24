@@ -9,49 +9,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Copy project to VPS
-      uses: appleboy/scp-action@v0.1.3
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: root
-        key: ${{ secrets.VPS_KEY }}
-        source: "."
-        target: "/opt/Loza-blog-backend-conectamente"
-
-    - name: Run deploy commands on VPS
+    - name: Deploy y build en el VPS
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VPS_HOST }}
-        username: root
+        username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_KEY }}
         command_timeout: "20m" # Evita que GitHub aborte antes de terminar el build
         script: |
           set -e
-          cd /opt/Loza-blog-backend-conectamente
+          cd /var/www/backend-conectamente/Loza-blog-backend-conectamente
 
-          # 1. Liberar el puerto 3000 si está trabado
-          sudo lsof -t -i:3000 | xargs -r sudo kill -9 || true
+          # 1. Traer el ultimo codigo mergeado a main (siempre igual a origin/main)
+          git fetch origin main
+          git reset --hard origin/main
 
-          # 2. Inyectar variables de entorno
+          # 2. Inyectar variables de entorno de produccion
           printf "%s" "${{ secrets.ENV_FILE }}" > .env
 
-          # 3. Cambiar el propietario a tu usuario normal para mantener los permisos limpios
-          chown -R aloza_loza:aloza_loza /opt/Loza-blog-backend-conectamente
-
-          # 4. Instalar y compilar el proyecto TypeScript
+          # 3. Instalar y compilar el proyecto TypeScript
           npm install
           npm run build
 
-          # 5. Reinicio seguro de PM2 sin colgar la consola de GitHub
-          # Si el proceso ya existe lo reinicia, si no, lo inicia de cero usando tu alias actual
-          pm2 describe loza-blog-backend > /dev/null 2>&1
-          if [ $? -eq 0 ]; then
-            pm2 restart loza-blog-backend --update-env
+          # 4. Reinicio seguro de PM2 sin colgar la consola de GitHub
+          # Si el proceso ya existe lo reinicia, si no, lo inicia de cero
+          if pm2 describe conectamente-api > /dev/null 2>&1; then
+            pm2 restart conectamente-api --update-env
           else
-            pm2 start dist/main.js --name "loza-blog-backend"
+            pm2 start dist/main.js --name "conectamente-api"
           fi
 
           pm2 save
